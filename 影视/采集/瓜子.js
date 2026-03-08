@@ -999,7 +999,7 @@ async function detail(params) {
                 if (scrapeCandidates.length > 0) {
                     try {
                         // 以视频ID作为刮削资源ID，保证同一条目下刮削结果稳定复用
-                        const sourceId = `spider_source_${await OmniBox.getSourceId()}_${videoIdForScrape}`;
+                        const sourceId = `spider_source_${await OmniBox.getSourceId()}_${videoId}`;
                         const scrapingResult = await OmniBox.processScraping(sourceId, vod.vod_name || '', vod.vod_name || '', scrapeCandidates);
                         OmniBox.log('info', `[瓜子APP] 刮削处理完成,结果: ${JSON.stringify(scrapingResult || {}).substring(0, 200)}`);
                         const metadata = await OmniBox.getScrapeMetadata(sourceId);
