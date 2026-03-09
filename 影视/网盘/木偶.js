@@ -185,6 +185,176 @@ function removeTrailingSlash(url) {
   return url.replace(/\/+$/, "");
 }
 
+// ==================== 自动筛选提取 ====================
+const FILTER_KEY_NAME_MAP = {
+  class: "类型",
+  area: "地区",
+  lang: "语言",
+  year: "年份",
+  letter: "字母",
+  by: "排序",
+  sort: "排序",
+  id: "分类"
+};
+
+let autoFiltersCache = {
+  data: null,
+  expiresAt: 0,
+};
+
+function normalizeFilterValueItem(item) {
+  if (!item) return null;
+  const name = String(item.n || item.name || "").trim();
+  const value = String(item.v ?? item.value ?? "").trim();
+  if (!name && !value) return null;
+  return { name, value };
+}
+
+function normalizeFilterGroup(group) {
+  if (!group) return null;
+  const key = String(group.key || "").trim();
+  const name = String(group.n || group.name || "").trim();
+  const valuesRaw = Array.isArray(group.v) ? group.v : (Array.isArray(group.value) ? group.value : []);
+  const values = valuesRaw.map(normalizeFilterValueItem).filter(Boolean);
+  if (!key || values.length === 0) return null;
+
+  return {
+    key,
+    name: name || FILTER_KEY_NAME_MAP[key] || key,
+    init: String(group.init ?? ""),
+    value: values,
+  };
+}
+
+function extractFilterKeyFromHref(href = "") {
+  if (!href) return null;
+  for (const key of Object.keys(FILTER_KEY_NAME_MAP)) {
+    if (href.includes(`${key}/`)) {
+      return key;
+    }
+  }
+  if (href.includes("id/")) {
+    return "id";
+  }
+  return null;
+}
+
+function extractFilterValueFromHref(href = "", key = "") {
+  if (!href || !key) return "";
+  const marker = `${key}/`;
+  const idx = href.indexOf(marker);
+  if (idx < 0) return "";
+  const rest = href.substring(idx + marker.length);
+  return decodeURIComponent((rest.split('/')[0] || "").split('.')[0] || "");
+}
+
+function parseFiltersFromHtml(html = "") {
+  if (!html) return [];
+  const $ = cheerio.load(html);
+  const groups = [];
+
+  const libraryBoxes = $(".library-box.scroll-box").slice(1);
+  libraryBoxes.each((_, element) => {
+    const links = $(element).find(".library-list a");
+    if (!links || links.length === 0) return;
+
+    const firstHref = links.first().attr("href") || "";
+    const key = extractFilterKeyFromHref(firstHref);
+    if (!key) return;
+
+    const values = [{ name: "全部", value: "" }];
+    const dedupe = new Set(["__ALL__"]);
+
+    links.each((__, a) => {
+      const href = $(a).attr("href") || "";
+      if (!href) return;
+      const value = extractFilterValueFromHref(href, key);
+      const name = ($(a).text() || "").trim();
+      const dedupeKey = `${name}::${value}`;
+      if (!name && !value) return;
+      if (dedupe.has(dedupeKey)) return;
+      dedupe.add(dedupeKey);
+      values.push({ name, value });
+    });
+
+    if (values.length > 1) {
+      groups.push({
+        key,
+        name: FILTER_KEY_NAME_MAP[key] || key,
+        init: "",
+        value: values,
+      });
+    }
+  });
+
+  return groups;
+}
+
+async function getAutoFiltersByCategory(categoryId) {
+  if (!categoryId) return [];
+  try {
+    const path = `/index.php/vod/show/id/${categoryId}.html`;
+    const { response } = await requestWithFailover(path);
+    if (response.statusCode !== 200 || !response.body) {
+      return [];
+    }
+    return parseFiltersFromHtml(response.body);
+  } catch (error) {
+    OmniBox.log("warn", `自动提取分类筛选失败: categoryId=${categoryId}, err=${error.message}`);
+    return [];
+  }
+}
+
+function normalizeStaticFilters(rawFilters) {
+  const result = {};
+  if (!rawFilters || typeof rawFilters !== "object") return result;
+
+  for (const typeId of Object.keys(rawFilters)) {
+    const groups = Array.isArray(rawFilters[typeId]) ? rawFilters[typeId] : [];
+    const normalizedGroups = groups.map(normalizeFilterGroup).filter(Boolean);
+    if (normalizedGroups.length > 0) {
+      result[typeId] = normalizedGroups;
+    }
+  }
+  return result;
+}
+
+async function getPreferredFilters(classes = []) {
+  const now = Date.now();
+  if (autoFiltersCache.data && now < autoFiltersCache.expiresAt) {
+    return autoFiltersCache.data;
+  }
+
+  const autoFilters = {};
+  for (const cls of classes) {
+    const typeId = String(cls?.type_id || "").trim();
+    if (!typeId) continue;
+    const groups = await getAutoFiltersByCategory(typeId);
+    if (groups.length > 0) {
+      autoFilters[typeId] = groups;
+    }
+  }
+
+  const staticFilters = normalizeStaticFilters(await getDynamicFilters());
+  const merged = {
+    ...staticFilters,
+    ...autoFilters,
+  };
+
+  if (Object.keys(autoFilters).length > 0) {
+    OmniBox.log("info", `自动提取筛选成功: ${Object.keys(autoFilters).length} 个分类，优先覆盖静态配置`);
+  } else {
+    OmniBox.log("warn", "自动提取筛选为空，回退到原有静态筛选逻辑");
+  }
+
+  autoFiltersCache = {
+    data: merged,
+    expiresAt: now + 10 * 60 * 1000,
+  };
+
+  return merged;
+}
+
 function isVideoFile(file) {
   if (!file || !file.file_name) {
     return false;
@@ -346,7 +516,7 @@ async function home(params) {
       OmniBox.log("warn", `从首页提取数据失败: ${error.message}`);
     }
 
-    const currentFilters = await getDynamicFilters();
+    const currentFilters = await getPreferredFilters(classes);
     return {
       class: classes,
       list: list,
@@ -379,8 +549,9 @@ async function category(params) {
     if (filters.area) {
       url += `/area/${filters.area}`;
     }
-    if (filters.sort) {
-      url += `/by/${filters.sort}`;
+    const sortValue = filters.sort || filters.by;
+    if (sortValue) {
+      url += `/by/${sortValue}`;
     }
     if (filters.class) {
       url += `/class/${filters.class}`;
@@ -394,8 +565,9 @@ async function category(params) {
     if (filters.year) {
       url += `/year/${filters.year}`;
     }
-    if (filters.tid) {
-      url += `/id/${filters.tid}.html`;
+    const tidValue = filters.tid || filters.id;
+    if (tidValue) {
+      url += `/id/${tidValue}.html`;
     } else {
       url += `/id/${categoryId}/page/${page}.html`;
     }
@@ -442,12 +614,26 @@ async function category(params) {
 
     OmniBox.log("info", `解析完成,找到 ${videos.length} 个视频`);
 
-    return {
+    const autoFilters = parseFiltersFromHtml(response.body);
+    let categoryFilters = autoFilters;
+
+    if (categoryFilters.length === 0) {
+      const preferredFilters = await getPreferredFilters([{ type_id: categoryId, type_name: "" }]);
+      categoryFilters = preferredFilters[categoryId] || [];
+    }
+
+    const result = {
       list: videos,
       page: page,
       pagecount: 0,
       total: videos.length,
     };
+
+    if (page === 1 && categoryFilters.length > 0) {
+      result.filters = categoryFilters;
+    }
+
+    return result;
   } catch (error) {
     OmniBox.log("error", `获取分类数据失败: ${error.message}`);
     return {
