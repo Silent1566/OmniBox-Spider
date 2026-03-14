@@ -2,7 +2,7 @@
 // @author 
 // @description 刮削：支持，弹幕：支持，嗅探：支持
 // @dependencies: axios, cheerio
-// @version 1.0.1
+// @version 1.0.2
 // @downloadURL https://gh-proxy.org/https://github.com/Silent1566/OmniBox-Spider/raw/refs/heads/main/影视/网盘/木偶.js
 
 // 引入 OmniBox SDK
@@ -30,7 +30,7 @@ const WEB_SITES = WEB_SITE_CONFIG.split(';').map(url => url.trim()).filter(url =
 // 筛选配置: 环境变量 -> 本地文件 -> 远程链接
 const FILTERS_PATH_REMOTE = "https://gh-proxy.org/https://github.com/Silent1566/OmniBox-Spider/blob/main/%E9%85%8D%E7%BD%AE/%E7%AD%9B%E9%80%89/mogg.json";
 const FILTERS_PATH_LOCAL = "/app/static/js/mogg.json";
-const FILTERS_WOGG = process.env.FILTERS_WOGG || (fs.existsSync(FILTERS_PATH_LOCAL)
+const FILTERS = process.env.FILTERS_WOGG || (fs.existsSync(FILTERS_PATH_LOCAL)
   ? fs.readFileSync(FILTERS_PATH_LOCAL, "utf-8")
   : FILTERS_PATH_REMOTE);
 // 读取环境变量:支持多个网盘类型,用分号分割
@@ -142,7 +142,7 @@ function getBaseUrl() {
 }
 
 async function getDynamicFilters() {
-  const config = FILTERS_WOGG;
+  const config = FILTERS;
   const defaultFilters = {};
 
   if (config) {
