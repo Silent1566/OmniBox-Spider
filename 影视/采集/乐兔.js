@@ -1,7 +1,7 @@
 // @name 乐兔
 // @author 
 // @description 刮削：支持，弹幕：支持，嗅探：支持，广告：有
-// @version 1.0.1
+// @version 1.0.2
 // @downloadURL https://xget.xi-xu.me/gh/Silent1566/OmniBox-Spider/raw/refs/heads/main/影视/采集/乐兔.js
 /**
  * 质量较差不建议加入
@@ -10,7 +10,7 @@
  * 1. 由 `本地调试/乐兔.js` 转换为 OmniBox 标准接口。
  * 2. 支持 `home/category/search/detail/play`。
  * 3. 详情将旧式 `vod_play_from + vod_play_url` 转换为 `vod_play_sources`。
- * 4. 参考 `影视/采集/热播.js` 增加 `DANMU_API` 弹幕匹配能力。
+ * 4. 参考 `影视/采集/热播.js` 增加 `DANMU_API` 弹幕匹配能力。 
  *
  * 环境变量：
  * - `LETU_HOST`：站点域名，默认 `https://www.letu.me`
@@ -40,16 +40,31 @@ const axiosInstance = axios.create({
 });
 
 // ==================== 日志工具 ====================
+/**
+ * 输出信息级别日志
+ * @param {string} message - 日志消息
+ * @param {*} data - 可选的数据对象，会被 JSON 序列化
+ */
 function logInfo(message, data = null) {
   const output = data ? `${message}: ${JSON.stringify(data)}` : message;
   OmniBox.log("info", `[乐兔] ${output}`);
 }
 
+/**
+ * 输出错误级别日志
+ * @param {string} message - 日志消息
+ * @param {Error|string} error - 错误对象或错误信息
+ */
 function logError(message, error) {
   OmniBox.log("error", `[乐兔] ${message}: ${error?.message || error}`);
 }
 
 // ==================== 通用工具 ====================
+/**
+ * Base64 编码
+ * @param {*} text - 待编码文本
+ * @returns {string} Base64 编码后的字符串
+ */
 function e64(text) {
   try {
     return Buffer.from(String(text || ""), "utf8").toString("base64");
@@ -58,6 +73,11 @@ function e64(text) {
   }
 }
 
+/**
+ * Base64 解码
+ * @param {string} text - 待解码的 Base64 字符串
+ * @returns {string} 解码后的字符串
+ */
 function d64(text) {
   try {
     return Buffer.from(String(text || ""), "base64").toString("utf8");
@@ -66,6 +86,11 @@ function d64(text) {
   }
 }
 
+/**
+ * 编码对象为 Base64 JSON
+ * @param {Object} obj - 待编码对象
+ * @returns {string} Base64 编码的 JSON 字符串
+ */
 function encodeMeta(obj) {
   try {
     return e64(JSON.stringify(obj || {}));
@@ -74,6 +99,11 @@ function encodeMeta(obj) {
   }
 }
 
+/**
+ * 解码 Base64 JSON 为对象
+ * @param {string} str - Base64 编码的 JSON 字符串
+ * @returns {Object} 解码后的对象
+ */
 function decodeMeta(str) {
   try {
     const raw = d64(str || "");
@@ -83,6 +113,11 @@ function decodeMeta(str) {
   }
 }
 
+/**
+ * 转换为绝对 URL
+ * @param {string} pathOrUrl - 相对路径或绝对 URL
+ * @returns {string} 绝对 URL
+ */
 function toAbsUrl(pathOrUrl) {
   const v = String(pathOrUrl || "");
   if (!v) return "";
@@ -252,13 +287,18 @@ function buildScrapedDanmuFileName(scrapeData, scrapeType, mapping, fallbackVodN
   return `${title}.${seasonAirYear}.S${String(seasonNumber).padStart(2, "0")}E${String(episodeNumber).padStart(2, "0")}`;
 }
 
+/**
+ * 嗅探播放页面获取视频地址
+ * @param {string} playUrl - 播放页面 URL
+ * @returns {Promise<Object|null>} 嗅探结果或 null
+ */
 async function sniffLetuPlay(playUrl) {
   if (!playUrl) return null;
   try {
     logInfo("尝试嗅探播放页", playUrl);
     const sniffed = await OmniBox.sniffVideo(playUrl);
     if (sniffed && sniffed.url) {
-      logInfo("嗅探成功", sniffed.url);
+      logInfo("嗅探成功", { sniffUrl: sniffed.url?.slice(0, 120) });
       return {
         urls: [{ name: "嗅探线路", url: sniffed.url }],
         parse: 0,
@@ -271,10 +311,16 @@ async function sniffLetuPlay(playUrl) {
   return null;
 }
 
+/**
+ * 匹配弹幕
+ * @param {string} fileName - 文件名（用于弹幕匹配）
+ * @returns {Promise<Array>} 弹幕列表
+ */
 async function matchDanmu(fileName) {
   if (!DANMU_API || !fileName) return [];
 
   try {
+    logInfo("弹幕匹配请求", { fileName, api: DANMU_API });
     const response = await OmniBox.request(`${DANMU_API}/api/v2/match`, {
       method: "POST",
       headers: {
@@ -284,16 +330,28 @@ async function matchDanmu(fileName) {
       body: JSON.stringify({ fileName }),
     });
 
-    if (response.statusCode !== 200) return [];
+    if (response.statusCode !== 200) {
+      logInfo("弹幕匹配 API 返回非 200", { statusCode: response.statusCode });
+      return [];
+    }
     const matchData = JSON.parse(response.body);
-    if (!matchData.isMatched) return [];
+    if (!matchData.isMatched) {
+      logInfo("弹幕未匹配", { fileName });
+      return [];
+    }
 
     const matches = matchData.matches || [];
-    if (matches.length === 0) return [];
+    if (matches.length === 0) {
+      logInfo("弹幕匹配结果为空", { fileName });
+      return [];
+    }
 
     const firstMatch = matches[0];
     const episodeId = firstMatch.episodeId;
-    if (!episodeId) return [];
+    if (!episodeId) {
+      logInfo("弹幕匹配无 episodeId", { fileName });
+      return [];
+    }
 
     const animeTitle = firstMatch.animeTitle || "";
     const episodeTitle = firstMatch.episodeTitle || "";
@@ -306,6 +364,8 @@ async function matchDanmu(fileName) {
       danmakuName = episodeTitle;
     }
 
+    logInfo("弹幕匹配成功", { fileName, danmakuName, episodeId });
+
     return [{
       name: danmakuName,
       url: `${DANMU_API}/api/v2/comment/${episodeId}?format=xml`,
@@ -316,14 +376,22 @@ async function matchDanmu(fileName) {
   }
 }
 
+/**
+ * 获取分类列表
+ * @param {string} type - 分类 ID
+ * @param {number} page - 页码
+ * @returns {Promise<Object>} 分类列表结果
+ */
 async function getCategoryList(type, page = 1) {
   try {
     const tid = type || "1";
     const pg = page || 1;
-    const url = `${HOST}/vodtype/${tid}-${pg}.html`;
+    const url = `${HOST}/type/${tid}-${pg}.html`;
 
+    logInfo("获取分类列表", { type: tid, page: pg, url });
     const response = await axiosInstance.get(url, { headers: DEFAULT_HEADERS });
     const list = parseCardList(response.data);
+    logInfo("分类列表获取成功", { count: list.length, page: pg });
 
     return {
       list,
@@ -338,9 +406,16 @@ async function getCategoryList(type, page = 1) {
   }
 }
 
+/**
+ * 获取详情页信息
+ * 包括：基本信息、播放源、集数列表、刮削元数据
+ * @param {string} id - 视频 ID（详情页 URL）
+ * @returns {Promise<Object|null>} 视频详情对象或 null
+ */
 async function getDetailById(id) {
   try {
     const detailUrl = toAbsUrl(id);
+    logInfo("获取详情页", { detailUrl });
     const response = await axiosInstance.get(detailUrl, { headers: DEFAULT_HEADERS });
     const $ = cheerio.load(response.data || "");
 
@@ -351,6 +426,8 @@ async function getDetailById(id) {
     const vodDirector = $(".no-space.no-margin.m.l").text().trim();
     const vodArea = $(".no-margin.m.l").text().trim();
     const vodContent = $(".responsive p").last().text().trim();
+
+    logInfo("详情页基本信息", { vodName, vodType, vodArea });
 
     const playFromList = [];
     const playUrlList = [];
@@ -368,6 +445,7 @@ async function getDetailById(id) {
         }
       });
       playUrlList.push(episodes.join("#"));
+      logInfo(`详情页播放源 ${index + 1}`, { name: tabName, episodeCount: episodes.length });
     });
 
     const videoIdForScrape = String(id || "");
@@ -393,6 +471,7 @@ async function getDetailById(id) {
 
     if (scrapeCandidates.length > 0) {
       try {
+        logInfo("开始刮削处理", { candidateCount: scrapeCandidates.length });
         const scrapingResult = await OmniBox.processScraping(videoIdForScrape, vodName || "", vodName || "", scrapeCandidates);
         OmniBox.log("info", `[乐兔] 刮削处理完成,结果: ${JSON.stringify(scrapingResult || {}).substring(0, 200)}`);
 
@@ -443,6 +522,12 @@ async function getDetailById(id) {
       })),
     }));
 
+    logInfo("详情页处理完成", { 
+      finalName: scrapeData?.title || vodName,
+      sourceCount: normalizedPlaySources.length,
+      totalEpisodes: normalizedPlaySources.reduce((sum, s) => sum + (s.episodes?.length || 0), 0)
+    });
+
     return {
       vod_id: id,
       vod_name: scrapeData?.title || vodName,
@@ -467,11 +552,29 @@ async function getDetailById(id) {
   }
 }
 
+/**
+ * 获取播放地址
+ * 支持多种场景：
+ * 1. JSON 接口直返（code=200，包含 url 字段）
+ * 2. MacCMS player 配置（支持加密）
+ * 3. 嗅探播放页面
+ * 4. 降级到解析模式
+ * 
+ * @param {string} playId - 播放 ID（可能是 base64 编码的 JSON）
+ * @param {string} vodName - 视频名称
+ * @param {string} episodeName - 集数名称
+ * @param {string} vodId - 视频 ID（用于获取刮削元数据）
+ * @returns {Promise<Object>} 播放响应对象 { urls, parse, header, danmaku? }
+ */
 async function getPlay(playId, vodName = "", episodeName = "", vodId = "") {
   try {
+    logInfo("getPlay 入参", { playId, vodName, episodeName, vodId });
+
     let realPlayId = playId;
     let playMeta = {};
     let scrapedDanmuFileName = "";
+    
+    // 尝试解析 playId（可能是 base64 编码的 JSON 元数据）
     try {
       const decoded = d64(playId);
       if (decoded && decoded.startsWith("{")) {
@@ -480,11 +583,17 @@ async function getPlay(playId, vodName = "", episodeName = "", vodId = "") {
         realPlayId = parsed.id || playId;
         vodName = parsed.v || vodName;
         episodeName = parsed.e || episodeName;
+        logInfo("playId 解析成功", { 
+          decodedMeta: { id: realPlayId, v: vodName, e: episodeName, fid: playMeta.fid } 
+        });
       }
     } catch {
-      // ignore
+      logInfo("playId 不是 base64 编码，直接使用原值", { playId });
     }
 
+    logInfo("playId 解析完成", { realPlayId, vodName, episodeName, hasFid: !!playMeta.fid });
+
+    // 尝试获取刮削元数据以匹配弹幕
     try {
       const sourceVideoId = String(vodId || playMeta.sid || "");
       if (sourceVideoId) {
@@ -498,12 +607,20 @@ async function getPlay(playId, vodName = "", episodeName = "", vodId = "") {
             vodName,
             episodeName
           );
+          logInfo("刮削元数据匹配成功", {
+            scrapeType: metadata.scrapeType,
+            hasMapping: !!mapping,
+            scrapedDanmuFileName,
+          });
           if (metadata.scrapeData.title) {
             vodName = metadata.scrapeData.title;
           }
           if (mapping?.episodeName) {
             episodeName = mapping.episodeName;
           }
+        }
+        else {
+          logInfo("刮削元数据为空", { sourceVideoId });
         }
       }
     } catch (error) {
@@ -514,26 +631,36 @@ async function getPlay(playId, vodName = "", episodeName = "", vodId = "") {
     const response = await axiosInstance.get(playPageUrl, { headers: DEFAULT_HEADERS });
     const html = String(response.data || "");
 
-    // 1) JSON 接口直返
+    logInfo("获取播放页成功", { playPageUrl, htmlLength: html.length });
+
+    // 场景 1: JSON 接口直返
     try {
       const json = JSON.parse(html);
       if (json && Number(json.code) === 200 && json.url) {
         let videoUrl = String(json.url);
+        logInfo("场景1: 检测到 JSON 直返", { 
+          code: json.code, 
+          originalUrl: videoUrl?.slice(0, 100) 
+        });
 
+        // 处理 rose_ 前缀的 base64 编码
         if (videoUrl.startsWith("rose_")) {
           const base64Part = videoUrl.substring(5);
           try {
             const decodedBase64 = decodeURIComponent(base64Part);
             videoUrl = Buffer.from(decodedBase64, "base64").toString();
+            logInfo("场景1: rose_ 前缀解码成功", { decodedUrl: videoUrl?.slice(0, 100) });
           } catch {
             try {
               videoUrl = Buffer.from(base64Part, "base64").toString();
+              logInfo("场景1: rose_ 前缀直接 base64 解码成功", { decodedUrl: videoUrl?.slice(0, 100) });
             } catch {
-              // ignore
+              logInfo("场景1: rose_ 前缀解码失败，保持原值");
             }
           }
         } else if (videoUrl.startsWith("/")) {
           videoUrl = toAbsUrl(videoUrl);
+          logInfo("场景1: 相对路径转绝对路径", { absoluteUrl: videoUrl?.slice(0, 100) });
         }
 
         const playResponse = {
@@ -542,54 +669,110 @@ async function getPlay(playId, vodName = "", episodeName = "", vodId = "") {
           header: DEFAULT_HEADERS,
         };
 
+        logInfo("场景1: JSON 直返播放地址", {
+          finalUrl: videoUrl?.slice(0, 120),
+          danmuEnabled: DANMU_API ? "yes" : "no",
+          vodName,
+          episodeName,
+        });
+
+        // 尝试匹配弹幕
         if (DANMU_API && vodName) {
           const fileName = scrapedDanmuFileName || buildFileNameForDanmu(vodName, episodeName);
           if (fileName) {
+            logInfo("场景1: 尝试匹配弹幕", { fileName });
             const danmakuList = await matchDanmu(fileName);
-            if (danmakuList.length > 0) playResponse.danmaku = danmakuList;
+            if (danmakuList.length > 0) {
+              playResponse.danmaku = danmakuList;
+              logInfo("场景1: 弹幕匹配成功", { danmakuCount: danmakuList.length });
+            } else {
+              logInfo("场景1: 未匹配到弹幕");
+            }
           }
         }
 
         return playResponse;
       }
     } catch {
-      // ignore
+      logInfo("场景1: JSON 解析失败或不符合条件");
     }
 
-    // 2) MacCMS player_ 配置
+    // 场景 2: MacCMS player 配置
     try {
       const match = html.match(/player_.*?=(\{[\s\S]*?\})/);
       if (match && match[1]) {
+        logInfo("场景2: 检测到 MacCMS player 配置");
         const conf = JSON.parse(match[1].replace(/'/g, '"'));
         let videoUrl = conf.url || "";
+        
+        logInfo("场景2: player 配置信息", { 
+          encrypt: conf.encrypt, 
+          originalUrl: videoUrl?.slice(0, 100) 
+        });
 
-        if (String(conf.encrypt) === "1") videoUrl = decodeURIComponent(videoUrl);
-        if (String(conf.encrypt) === "2") videoUrl = Buffer.from(decodeURIComponent(videoUrl), "base64").toString();
+        // 处理加密
+        if (String(conf.encrypt) === "1") {
+          videoUrl = decodeURIComponent(videoUrl);
+          logInfo("场景2: 加密类型 1 (URL decode) 解码成功", { decodedUrl: videoUrl?.slice(0, 100) });
+        }
+        if (String(conf.encrypt) === "2") {
+          videoUrl = Buffer.from(decodeURIComponent(videoUrl), "base64").toString();
+          logInfo("场景2: 加密类型 2 (base64) 解码成功", { decodedUrl: videoUrl?.slice(0, 100) });
+        }
 
-        if (videoUrl) {
+        // 检查是否是直接播放链接
+        if (videoUrl && videoUrl.match(/\.(m3u8|mp4|flv|avi|mkv|ts)/i)) {
           const playResponse = {
             urls: [{ name: "播放", url: videoUrl }],
             parse: 0,
             header: DEFAULT_HEADERS,
           };
 
+          logInfo("场景2: MacCMS player 播放地址", {
+            encrypt: conf.encrypt,
+            finalUrl: videoUrl?.slice(0, 120),
+            danmuEnabled: DANMU_API ? "yes" : "no",
+            vodName,
+            episodeName,
+          });
+
+          // 尝试匹配弹幕
           if (DANMU_API && vodName) {
             const fileName = scrapedDanmuFileName || buildFileNameForDanmu(vodName, episodeName);
             if (fileName) {
+              logInfo("场景2: 尝试匹配弹幕", { fileName });
               const danmakuList = await matchDanmu(fileName);
-              if (danmakuList.length > 0) playResponse.danmaku = danmakuList;
+              if (danmakuList.length > 0) {
+                playResponse.danmaku = danmakuList;
+                logInfo("场景2: 弹幕匹配成功", { danmakuCount: danmakuList.length });
+              } else {
+                logInfo("场景2: 未匹配到弹幕");
+              }
             }
           }
 
           return playResponse;
+        } else if (videoUrl) {
+          playPageUrl = videoUrl;
         }
       }
-    } catch {
-      // ignore
+    } catch (error) {
+      logInfo(`场景2: MacCMS player 配置解析失败: ${error.message}`);
     }
 
+    // 场景 3: 嗅探播放页面 
+    logInfo("场景3: 尝试嗅探播放页面", { playPageUrl });
     const sniffResult = await sniffLetuPlay(playPageUrl);
-    if (sniffResult) return sniffResult;
+    if (sniffResult) {
+      logInfo("场景3: 嗅探成功", { 
+        sniffUrl: sniffResult.urls?.[0]?.url?.slice(0, 120),
+        parse: sniffResult.parse 
+      });
+      return sniffResult;
+    }
+
+    // 场景 4: 降级到解析模式
+    logInfo("场景4: 未命中直返/配置/嗅探，降级到解析模式", { playPageUrl });
 
     return {
       urls: [{ name: "解析", url: playPageUrl }],
@@ -597,9 +780,19 @@ async function getPlay(playId, vodName = "", episodeName = "", vodId = "") {
       header: DEFAULT_HEADERS,
     };
   } catch (error) {
-    logError("播放解析失败", error);
+    logError("播放解析异常", error);
+    
+    // 异常降级：尝试嗅探
+    logInfo("异常处理: 尝试嗅探原始 playId", { playId });
     const sniffResult = await sniffLetuPlay(toAbsUrl(playId));
-    if (sniffResult) return sniffResult;
+    if (sniffResult) {
+      logInfo("异常处理: 嗅探成功", { 
+        sniffUrl: sniffResult.urls?.[0]?.url?.slice(0, 120) 
+      });
+      return sniffResult;
+    }
+    
+    logInfo("异常处理: 最终降级到解析模式", { playId });
     return {
       urls: [{ name: "解析", url: toAbsUrl(playId) }],
       parse: 1,
@@ -608,14 +801,22 @@ async function getPlay(playId, vodName = "", episodeName = "", vodId = "") {
   }
 }
 
+/**
+ * 搜索视频
+ * @param {string} keyword - 搜索关键词
+ * @param {number} page - 页码
+ * @returns {Promise<Object>} 搜索结果
+ */
 async function getSearch(keyword, page = 1) {
   try {
     const pg = page || 1;
     const wd = encodeURIComponent(String(keyword || "").trim());
     const url = `${HOST}/vodsearch/${wd}----------${pg}---/`;
 
+    logInfo("搜索视频", { keyword, page: pg, url });
     const response = await axiosInstance.get(url, { headers: DEFAULT_HEADERS });
     const list = parseCardList(response.data);
+    logInfo("搜索完成", { keyword, count: list.length, page: pg });
 
     return {
       list,
