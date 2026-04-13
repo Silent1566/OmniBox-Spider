@@ -1,6 +1,6 @@
 // @name 听友FM
 // @author OmniBox助手
-// @version 1.0.1
+// @version 1.0.3
 // @downloadURL https://gh-proxy.org/https://github.com/Silent1566/OmniBox-Spider/raw/refs/heads/main/听书/听友FM.js
 // @dependencies axios,cheerio,@noble/ciphers
 // notes:
@@ -159,6 +159,7 @@ async function encryptPayload(plainText) {
 }
 
 async function decryptPayloadHex(hex) {
+  const verboseApi = !!process.env.TINGYOU_VERBOSE_API;
   const raw = hexToBytes(hex);
   if (!raw || raw.length < 29) throw new Error("payload too short");
   const version = raw[0];
@@ -785,7 +786,8 @@ async function play(params, context) {
     let cookie = process.env.TINGYOU_COOKIE || process.env.TINGYOU_ANON_COOKIE || "";
     log("info", `play.headers.present ${j({ hasAuth: !!auth, hasCookie: !!cookie, albumId, chapterIdx, flag: flag || '' })}`);
 
-    if (!auth && !HARDCODED_TINGYOU_ANON_AUTH) {
+    // 播放优先尝试新的匿名鉴权，避免长期硬编码匿名凭证过期后一直卡死。
+    if (!process.env.TINGYOU_AUTH && !process.env.TINGYOU_ANON_AUTH) {
       try {
         const anon = await anonymousAuth();
         auth = anon.authToken || auth;
@@ -794,8 +796,8 @@ async function play(params, context) {
       } catch (anonErr) {
         log("error", `play.auth.anonymous.error message=${anonErr.message} stack=${anonErr.stack || ""}`);
       }
-    } else if (!auth && HARDCODED_TINGYOU_ANON_AUTH) {
-      log("info", `play.auth.anonymous.skip reason=useHardcodedFallback`);
+    } else {
+      log("info", `play.auth.anonymous.skip reason=useEnvCredentials`);
     }
 
     if (!auth) auth = HARDCODED_TINGYOU_ANON_AUTH || auth;
