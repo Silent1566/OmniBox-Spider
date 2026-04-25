@@ -2,7 +2,7 @@
 // @author 梦
 // @description 刮削：已接入，弹幕：未接入，嗅探：直接返回 play.modujx11.com 直链
 // @dependencies cheerio
-// @version 1.0.4
+// @version 1.0.5
 // @downloadURL https://gh-proxy.org/https://github.com/Silent1566/OmniBox-Spider/raw/refs/heads/openclaw/影视/采集/威尔伯TV.js
 
 const OmniBox = require("omnibox_sdk");
@@ -31,6 +31,53 @@ const HOME_SECTION_MARKERS = {
   anime: 'href":"/video/anime"',
   variety: 'href":"/video/variety"',
 };
+
+const FILTERS = {
+  movie: [{ key: "type", name: "按类型", init: "", value: [
+    { name: "全部", value: "" },
+    { name: "喜剧", value: "5" },
+    { name: "爱情", value: "6" },
+    { name: "动作", value: "7" },
+    { name: "犯罪", value: "8" },
+    { name: "科幻", value: "9" },
+    { name: "灾难", value: "11" },
+    { name: "恐怖", value: "12" },
+    { name: "剧情", value: "13" },
+    { name: "战争", value: "14" },
+    { name: "悬疑", value: "15" },
+    { name: "动画", value: "16" },
+    { name: "其他", value: "28" },
+  ] }],
+  tv: [{ key: "type", name: "按类型", init: "", value: [
+    { name: "全部", value: "" },
+    { name: "国产剧", value: "17" },
+    { name: "港台剧", value: "18" },
+    { name: "日韩剧", value: "19" },
+    { name: "欧美剧", value: "20" },
+    { name: "其他剧", value: "21" },
+  ] }],
+  anime: [{ key: "type", name: "按类型", init: "", value: [
+    { name: "全部", value: "" },
+    { name: "国产动漫", value: "22" },
+    { name: "日本动漫", value: "23" },
+    { name: "欧美动漫", value: "29" },
+  ] }],
+  variety: [{ key: "type", name: "按类型", init: "", value: [
+    { name: "全部", value: "" },
+    { name: "国产综艺", value: "24" },
+    { name: "港台综艺", value: "25" },
+    { name: "日韩综艺", value: "26" },
+    { name: "欧美综艺", value: "27" },
+  ] }],
+};
+
+function buildFilters() {
+  const result = {};
+  for (const item of CATEGORY_MAP) {
+    result[item.type_id] = FILTERS[item.type_id] || [];
+  }
+  return result;
+}
 
 module.exports = { home, category, detail, search, play };
 runner.run(module.exports);
@@ -239,11 +286,12 @@ async function home(params, context) {
       }
     }
 
-    await log("info", "home 解析完成", { listCount: list.length, first: list[0] || null });
-    return { class: CATEGORY_MAP, filters: {}, list };
+    const filters = buildFilters();
+    await log("info", "home 解析完成", { listCount: list.length, first: list[0] || null, filterKeys: Object.keys(filters) });
+    return { class: CATEGORY_MAP, filters, list };
   } catch (e) {
     await log("error", "home 失败", { error: e.message });
-    return { class: CATEGORY_MAP, filters: {}, list: [] };
+    return { class: CATEGORY_MAP, filters: buildFilters(), list: [] };
   }
 }
 
@@ -284,11 +332,12 @@ async function category(params, context) {
       page,
       pagecount: page + (list.length >= 12 ? 1 : 0),
       total: list.length,
+      filters: FILTERS[typeId] || [],
       list,
     };
   } catch (e) {
     await log("error", "category 失败", { error: e.message, params });
-    return { page: 1, pagecount: 0, total: 0, list: [] };
+    return { page: 1, pagecount: 0, total: 0, filters: FILTERS[String(params?.categoryId || params?.type_id || params?.type || "movie").trim()] || [], list: [] };
   }
 }
 
@@ -350,7 +399,7 @@ async function search(params, context) {
     return { page, pagecount: page + (list.length >= 12 ? 1 : 0), total: list.length, list };
   } catch (e) {
     await log("error", "search 失败", { error: e.message, params });
-    return { page: 1, pagecount: 0, total: 0, list: [] };
+    return { page: 1, pagecount: 0, total: 0, filters: FILTERS[String(params?.categoryId || params?.type_id || params?.type || "movie").trim()] || [], list: [] };
   }
 }
 
