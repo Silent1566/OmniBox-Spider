@@ -154,6 +154,16 @@ function buildApiParams(embyInfos) {
     "X-Emby-Client": embyInfos.SessionInfo.Client,
     "X-Emby-Device-Name": embyInfos.SessionInfo.DeviceName,
     "X-Emby-Device-Id": embyInfos.SessionInfo.DeviceId,
+  };
+}
+
+function buildHeaders() {
+  return {
+    "User-Agent": "Yamby/1.0.2(Android)",
+    "Content-Type": "application/json; charset=UTF-8",
+  };
+}eName,
+    "X-Emby-Device-Id": embyInfos.SessionInfo.DeviceId,
     "X-Emby-Client-Version": embyInfos.SessionInfo.ApplicationVersion,
     "X-Emby-Token": embyInfos.AccessToken,
   };
