@@ -54,7 +54,7 @@ async function getXChaChaModule() {
 }
 
 const SITE = "https://tingyou.fm";
-const PAYLOAD_KEY_HEX = "ea9d9d4f9a983fe6f6382f29c7b46b8d6dc47abc6da36662e6ddff8c78902f65";
+const PAYLOAD_KEY_HEX = process.env.TINGYOU_PAYLOAD_KEY || "";
 const PAYLOAD_VERSION = 1;
 const DETAIL_GROUP_SIZE = Math.max(1, Number(process.env.TINGYOU_DETAIL_GROUP_SIZE || 40) || 40);
 
