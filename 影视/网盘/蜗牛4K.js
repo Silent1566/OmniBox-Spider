@@ -1,8 +1,8 @@
 // @name 蜗牛4K
-// @author
+// @author @Tao_XG
 // @description 刮削：支持，弹幕：支持，嗅探：支持。站点：zmi.kdns.fr（MacCMS mxone 模板，主推 115 分享）
 // @dependencies: axios, cheerio
-// @version 1.0.2
+// @version 1.0.3
 // @downloadURL https://gh-proxy.org/https://github.com/Silent1566/OmniBox-Spider/raw/refs/heads/main/影视/网盘/蜗牛4K.js
 
 // 引入 OmniBox SDK
@@ -65,6 +65,14 @@ const LOGIN_USERNAME = String(process.env.WONIU4K_USERNAME || process.env.WONIU4
 const LOGIN_PASSWORD = String(process.env.WONIU4K_PASSWORD || process.env.WONIU4K_PASS || "").trim();
 // Cookie 登录：浏览器 F12 → Application → Cookies → 复制 Cookie 字符串
 const WONIU4K_COOKIE = String(process.env.WONIU4K_COOKIE || process.env.WONIU4K_COOKIES || "").trim();
+// 验证码识别服务地址（POST /ocr/ {"data":"<base64图片>"}）
+const CAPTCHA_SERVICE_URL = String(process.env.DDDDOCR_API || "").replace(/\/+$/, "");
+// PanCheck 网盘链接有效性检测（参考盘搜分组.js，POST {PANCHECK_API}/api/v1/links/check）
+const PANCHECK_API = String(process.env.PANCHECK_API || "").trim().replace(/\/+$/, "");
+const PANCHECK_ENABLED = true;
+const PANCHECK_PLATFORMS = splitConfigList(process.env.PANCHECK_PLATFORMS || "115,quark,baidu,uc,pan123,tianyi,cmcc")
+  .map((p) => String(p).toLowerCase().trim())
+  .filter(Boolean);
 // ==================== 配置区域结束 ====================
 
 /**
@@ -253,6 +261,14 @@ function clearCookies() {
   cookieStore = {};
 }
 
+function hasAuthCookies() {
+  for (const domain of Object.keys(cookieStore)) {
+    const c = cookieStore[domain] || {};
+    if (c.user_id || c.user_name || c.user_check) return true;
+  }
+  return false;
+}
+
 // 启动时自动注入环境变量中的 Cookie
 if (WONIU4K_COOKIE) {
   setCookiesFromString(WONIU4K_COOKIE);
@@ -314,6 +330,80 @@ async function httpRequest(url, options = {}) {
 
 function sleep(ms) {
   return new Promise(resolve => setTimeout(resolve, ms));
+}
+
+async function downloadImageBase64(url, timeout = 10000) {
+  const headers = {
+    "User-Agent": SITE_UA,
+    "Accept": "image/webp,image/apng,image/*,*/*;q=0.8",
+    "Accept-Language": "zh-CN,zh;q=0.9",
+    Referer: getBaseUrl() + "/",
+  };
+  const cookieHeader = getCookieHeader(url);
+  if (cookieHeader) {
+    headers["Cookie"] = cookieHeader;
+  }
+  try {
+    const response = await axios({
+      url,
+      method: "GET",
+      headers,
+      timeout,
+      proxy: AXIOS_PROXY || false,
+      maxRedirects: 5,
+      httpAgent: KEEP_ALIVE_HTTP_AGENT,
+      httpsAgent: INSECURE_HTTPS_AGENT,
+      validateStatus: () => true,
+      responseType: "arraybuffer",
+    });
+    if (response.status !== 200 || !response.data || !Buffer.isBuffer(response.data) || response.data.length === 0) {
+      return "";
+    }
+    return response.data.toString("base64");
+  } catch (error) {
+    OmniBox.log("warn", `下载验证码图片失败: ${url} - ${error.message}`);
+    return "";
+  }
+}
+
+async function solveCaptchaByUrl(verifyUrl) {
+  if (!verifyUrl || !CAPTCHA_SERVICE_URL) {
+    return "";
+  }
+  try {
+    const b64 = await downloadImageBase64(verifyUrl);
+    if (!b64) {
+      OmniBox.log("warn", "蜗牛4K 验证码图片下载为空");
+      return "";
+    }
+    const ocrRes = await axios({
+      url: CAPTCHA_SERVICE_URL + "/ocr/",
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      data: JSON.stringify({ data: b64 }),
+      timeout: 30000,
+      validateStatus: () => true,
+      responseType: "text",
+    });
+    let parsed;
+    try {
+      parsed = JSON.parse(ocrRes.data || "{}");
+    } catch {
+      parsed = {};
+    }
+    if (parsed.status === 0 && parsed.data) {
+      const code = String(parsed.data.code ?? parsed.data.result ?? parsed.data.text ?? "").trim();
+      if (code) {
+        OmniBox.log("info", `蜗牛4K 验证码识别成功: ${code}`);
+        return code;
+      }
+    }
+    OmniBox.log("warn", `蜗牛4K 验证码识别无结果: ${ocrRes.status} ${String(parsed.msg || ocrRes.data || "").slice(0, 120)}`);
+    return "";
+  } catch (error) {
+    OmniBox.log("warn", `蜗牛4K 验证码识别服务不可用(${CAPTCHA_SERVICE_URL}): ${error.message}`);
+    return "";
+  }
 }
 
 function isBlockedHtml(body = "") {
@@ -743,6 +833,10 @@ async function getAutoFiltersByCategory(categoryId) {
         if (response.statusCode === 200 && response.body) {
           const groups = parseFiltersFromHtml(response.body);
           if (groups.length > 0) return groups;
+          // 主路径已返回有效内容但没有筛选，说明站点无筛选，不再尝试 fallback
+          if (path === paths[0]) {
+            return [];
+          }
         }
       } catch (_) {
         // try next
@@ -815,8 +909,11 @@ function isVideoFile(file) {
   }
 
   const fileName = file.file_name.toLowerCase();
-  const videoExtensions = [".mp4", ".mkv", ".avi", ".flv", ".mov", ".wmv", ".m3u8", ".ts", ".webm", ".m4v"];
-
+  const videoExtensions = [
+    ".mp4", ".mkv", ".avi", ".flv", ".mov", ".wmv", ".m3u8", ".ts", ".webm", ".m4v",
+    ".mpg", ".mpeg", ".vob", ".mts", ".m2ts", ".rm", ".rmvb", ".iso", ".3gp", ".ogv",
+    ".ogm", ".asf", ".f4v", ".dat", ".tp", ".trp", ".ifo",
+  ];
   for (const ext of videoExtensions) {
     if (fileName.endsWith(ext)) {
       return true;
@@ -825,7 +922,7 @@ function isVideoFile(file) {
 
   if (file.format_type) {
     const formatType = String(file.format_type).toLowerCase();
-    if (formatType.includes("video") || formatType.includes("mpeg") || formatType.includes("h264")) {
+    if (formatType.includes("video") || formatType.includes("mpeg") || formatType.includes("h264") || formatType.includes("iso")) {
       return true;
     }
   }
@@ -838,43 +935,49 @@ async function getAllVideoFiles(shareURL, files, errors = []) {
     return [];
   }
 
-  const tasks = files.map(async (file) => {
+  const results = [];
+  let dirIndex = 0;
+  for (const file of files) {
     if (file.file && isVideoFile(file)) {
-      return [file];
-    } else if (file.dir) {
-      const startTime = performance.now();
-
-      try {
-        const subFileList = await OmniBox.getDriveFileList(shareURL, file.fid);
-        const endTime = performance.now();
-        const duration = (endTime - startTime).toFixed(2);
-
-        OmniBox.log("info", `获取目录 [${file.name || file.fid}] 耗时: ${duration}ms`);
-
-        if (subFileList?.files && Array.isArray(subFileList.files)) {
-          return await getAllVideoFiles(shareURL, subFileList.files, errors);
-        }
-        return [];
-      } catch (error) {
-        const endTime = performance.now();
-        const duration = (endTime - startTime).toFixed(2);
-
-        const errorInfo = {
-          path: file.name || file.fid,
-          fid: file.fid,
-          message: error.message,
-          duration: `${duration}ms`,
-          timestamp: new Date().toISOString()
-        };
-        errors.push(errorInfo);
-        OmniBox.log("warn", `获取子目录失败 [${file.name || file.fid}] 耗时: ${duration}ms, 错误: ${error.message}`);
-        return [];
-      }
+      results.push([file]);
+      continue;
     }
-    return [];
-  });
+    if (!file.dir) continue;
 
-  const results = await Promise.all(tasks);
+    dirIndex++;
+    const startTime = performance.now();
+
+    try {
+      if (dirIndex > 1 && DRIVE_API_DELAY_MS > 0) {
+        await sleep(DRIVE_API_DELAY_MS);
+      }
+
+      const subFileList = await callDriveApiWithRetry(() => OmniBox.getDriveFileList(shareURL, file.fid));
+      const endTime = performance.now();
+      const duration = (endTime - startTime).toFixed(2);
+
+      OmniBox.log("info", `获取目录 [${file.name || file.fid}] 耗时: ${duration}ms`);
+
+      if (subFileList?.files && Array.isArray(subFileList.files)) {
+        const sub = await getAllVideoFiles(shareURL, subFileList.files, errors);
+        results.push(sub);
+      }
+    } catch (error) {
+      const endTime = performance.now();
+      const duration = (endTime - startTime).toFixed(2);
+
+      const errorInfo = {
+        path: file.name || file.fid,
+        fid: file.fid,
+        message: error.message,
+        duration: `${duration}ms`,
+        timestamp: new Date().toISOString()
+      };
+      errors.push(errorInfo);
+      OmniBox.log("warn", `获取子目录失败 [${file.name || file.fid}] 耗时: ${duration}ms, 错误: ${error.message}`);
+    }
+  }
+
   return results.flat();
 }
 
@@ -947,9 +1050,10 @@ async function home(params) {
     }
 
     const currentFilters = await getPreferredFilters(classes);
+    const wrappedList = (list || []).map(wrapMovieAsGroupItem);
     return {
       class: classes,
-      list: list,
+      list: wrappedList,
       filters: currentFilters,
     };
   } catch (error) {
@@ -978,6 +1082,27 @@ async function category(params) {
         pagecount: 0,
         total: 0,
       };
+    }
+
+    // 影片分组跳转: 格式 "mvg:videoId", 返回该片所有网盘分组(当前列表页就地显示)
+    if (String(categoryId).startsWith("mvg:")) {
+      const vid = String(categoryId).slice(4);
+      OmniBox.log("info", `蜗牛4K 影片分组(category): videoId=${vid}`);
+      return await getMovieDriveGroups(vid);
+    }
+
+    // 影片网盘分组跳转: 格式 "mv:网盘类型:videoId", 返回该片该类型下过滤后的链接列表
+    const movieGroup = parseMovieGroupVodId(categoryId);
+    if (movieGroup) {
+      OmniBox.log("info", `蜗牛4K 影片分组(category): driveType=${movieGroup.driveType}, videoId=${movieGroup.videoId}`);
+      return await searchLinksByDriveForMovie(movieGroup.videoId, movieGroup.driveType);
+    }
+
+    // 网盘分类跳转: 格式 "网盘类型|关键词"
+    const panGroup = parsePanGroupVodId(categoryId);
+    if (panGroup) {
+      OmniBox.log("info", `蜗牛4K 网盘分类跳转: driveType=${panGroup.driveType}, keyword=${panGroup.keyword}`);
+      return await searchVideosByDrive(panGroup.keyword, page, panGroup.driveType);
     }
 
     // mxone 伪静态优先；有筛选时回退 show 路径
@@ -1027,7 +1152,7 @@ async function category(params) {
 
     const pagecount = parsePageCount(response.body, page);
     const result = {
-      list: videos,
+      list: (videos || []).map(wrapMovieAsGroupItem),
       page: page,
       pagecount: pagecount,
       total: videos.length,
@@ -1096,7 +1221,8 @@ function decodePlayMeta(str = "") {
 }
 
 async function getDetailPageCached(videoId) {
-  const detailCacheKey = buildCacheKey("woniu4k:detailHtml", videoId);
+  const authState = hasAuthCookies() ? "auth" : "guest";
+  const detailCacheKey = buildCacheKey("woniu4k:detailHtml", `${videoId}:${authState}`);
   let detailPage = await getCachedJSON(detailCacheKey);
   if (!detailPage) {
     detailPage = await requestWithFailover(videoId);
@@ -1104,16 +1230,37 @@ async function getDetailPageCached(videoId) {
       await setCachedJSON(detailCacheKey, detailPage, WONIU_CACHE_EX_SECONDS);
     }
   } else {
-    logDetailDebug(`命中详情页缓存: ${videoId}`);
+    logDetailDebug(`命中详情页缓存: ${videoId} (${authState})`);
   }
   return detailPage;
+}
+
+function isDriveRateLimitError(err) {
+  const msg = String(err?.message || "");
+  return /405|429|频率|风控|太快|频繁|rate.?limit|too many|too fast|超时|timeout|502|503/i.test(msg);
+}
+
+async function callDriveApiWithRetry(fn, options = {}) {
+  const maxRetries = Math.max(0, options.maxRetries ?? 2);
+  const baseDelay = Math.max(1000, options.baseDelay ?? DRIVE_API_DELAY_MS);
+  for (let attempt = 0; ; attempt++) {
+    try {
+      return await fn();
+    } catch (error) {
+      const shouldRetry = isDriveRateLimitError(error) && attempt < maxRetries;
+      if (!shouldRetry) throw error;
+      const wait = baseDelay * Math.pow(2, attempt);
+      OmniBox.log("warn", `网盘接口被限流(第${attempt + 1}次重试): ${error.message}, ${wait}ms 后重试`);
+      await sleep(wait);
+    }
+  }
 }
 
 async function getDriveInfoCached(shareURL) {
   const cacheKey = buildCacheKey("woniu4k:driveInfo", shareURL);
   let driveInfo = await getCachedJSON(cacheKey);
   if (!driveInfo) {
-    driveInfo = await OmniBox.getDriveInfoByShareURL(shareURL);
+    driveInfo = await callDriveApiWithRetry(() => OmniBox.getDriveInfoByShareURL(shareURL));
     await setCachedJSON(cacheKey, driveInfo, WONIU_CACHE_EX_SECONDS);
   }
   return driveInfo;
@@ -1123,7 +1270,7 @@ async function getRootFileListCached(shareURL) {
   const cacheKey = buildCacheKey("woniu4k:rootFiles", shareURL);
   let fileList = await getCachedJSON(cacheKey);
   if (!fileList) {
-    fileList = await OmniBox.getDriveFileList(shareURL, "0");
+    fileList = await callDriveApiWithRetry(() => OmniBox.getDriveFileList(shareURL, "0"));
     if (fileList && fileList.files && Array.isArray(fileList.files)) {
       await setCachedJSON(cacheKey, fileList, WONIU_CACHE_EX_SECONDS);
     }
@@ -1401,6 +1548,63 @@ function extractPanUrls($) {
   return panUrls;
 }
 
+function extractPanItems($) {
+  const items = [];
+  const seen = new Set();
+
+  const pushUrl = (raw, name) => {
+    const url = extractPanUrl(raw);
+    if (!/^https?:\/\//i.test(url) || !isPanShareUrl(url)) return;
+    if (seen.has(url)) return;
+    seen.add(url);
+    items.push({
+      url,
+      name: String(name || "")
+        .replace(/https?:\/\/\S+/gi, "")
+        .replace(/\s+/g, " ")
+        .trim(),
+    });
+  };
+
+  // panlian_dark 模板
+  $(".pan-link-item[data-pan-item]").each((_, el) => {
+    const itemEl = $(el);
+    const attrUrl = itemEl.attr("data-pan-item");
+    let name = itemEl
+      .find(".pan-link-title,.pan-link-label,.pan-link-name,.link-title,.title")
+      .first()
+      .text()
+      .trim();
+    if (!name) name = itemEl.find(".pan-link-meta").first().text().trim();
+    if (attrUrl) pushUrl(attrUrl, name);
+    itemEl.find("[data-copy]").each((__, n) => pushUrl($(n).attr("data-copy"), name));
+    itemEl.find('a[href^="http"]').each((__, a) => pushUrl($(a).attr("href"), name));
+  });
+
+  // mxone 模板
+  $(".module-row-info").each((_, el) => {
+    const name = $(el).find(".module-row-title,.module-item-title").first().text().trim();
+    $(el).find("[data-clipboard-text]").each((__, n) => pushUrl($(n).attr("data-clipboard-text"), name));
+    $(el).find('a[href^="http"]').each((__, a) => pushUrl($(a).attr("href"), name));
+  });
+
+  // 兜底：整页扫描分享链接
+  if (items.length === 0) {
+    const html = $.html() || "";
+    const re =
+      /https?:\/\/(?:115cdn\.com|115\.com|anxia\.com|pan\.quark\.cn|www\.aliyundrive\.com|www\.alipan\.com|pan\.baidu\.com|drive\.uc\.cn|cloud\.189\.cn|www\.123pan\.com|pan\.xunlei\.com)\/[^\s"'<>]+/gi;
+    let m;
+    while ((m = re.exec(html))) {
+      const url = normalizeShareUrl(m[0]);
+      if (!url || seen.has(url)) continue;
+      seen.add(url);
+      items.push({ url, name: "" });
+    }
+  }
+
+  return items;
+}
+
 async function collectDriveTypeCountMap(panUrls = []) {
   const driveTypeCountMap = {};
   for (const shareURL of panUrls) {
@@ -1418,9 +1622,95 @@ async function collectDriveTypeCountMap(panUrls = []) {
 /**
  * 获取视频详情
  */
+function parseMovieGroupVodId(raw = "") {
+  const s = String(raw || "").trim();
+  if (!s.startsWith("mv:")) return null;
+  const parts = s.split(":");
+  if (parts.length < 3) return null;
+  const driveType = parts[1] || "";
+  const videoId = parts.slice(2).join(":");
+  if (!driveType || !videoId) return null;
+  return { driveType, videoId };
+}
+
+function parseShareUrlWithTitle(raw = "") {
+  const s = String(raw || "").trim();
+  if (!s.includes("|")) return null;
+  const idx = s.indexOf("|");
+  const urlPart = s.slice(0, idx).trim();
+  const title = s.slice(idx + 1).trim();
+  if (!/^https?:\/\//i.test(urlPart) || !isPanShareUrl(urlPart)) return null;
+  const shareURL = normalizeShareUrl(urlPart);
+  if (!shareURL) return null;
+  return { shareURL, title };
+}
+
+async function buildShareUrlDetail(shareURL, title = "") {
+  const driveInfo = await getDriveInfoCached(shareURL);
+  const displayName = driveInfo?.displayName || "网盘";
+  const fileList = await getRootFileListCached(shareURL);
+  const allVideoFiles = await getAllVideoFilesCached(shareURL, fileList?.files || []);
+  const episodes = (allVideoFiles || []).map((file) => {
+    const fileName = file.file_name || "";
+    const fileId = file.fid || "";
+    const fileSize = file.size || file.file_size || 0;
+    const basePlayId = fileId ? `${shareURL}|${fileId}` : "";
+    let displayFileName = fileName;
+    if (fileSize > 0) {
+      const fileSizeStr = formatFileSize(fileSize);
+      if (fileSizeStr) displayFileName = `[${fileSizeStr}] ${fileName}`;
+    }
+    return {
+      name: displayFileName,
+      playId: basePlayId,
+      size: fileSize > 0 ? fileSize : undefined,
+      rawName: fileName,
+    };
+  }).filter((ep) => ep.name && ep.playId);
+  return {
+    list: [{
+      vod_id: shareURL,
+      vod_name: title || `${displayName}推送`,
+      vod_pic: "",
+      vod_content: shareURL,
+      vod_play_sources: episodes.length > 0 ? [{ name: displayName, episodes }] : undefined,
+      vod_remarks: title || "网盘推送",
+    }],
+  };
+}
+
 async function detail(params, context) {
   try {
     const rawVideoId = params.videoId || params.id || params.vod_id || "";
+
+    // 影片分组跳转: 格式 "mvg:videoId"
+    if (String(rawVideoId).startsWith("mvg:")) {
+      const vid = String(rawVideoId).slice(4);
+      OmniBox.log("info", `蜗牛4K 影片分组(detail): videoId=${vid}`);
+      return await getMovieDriveGroups(vid);
+    }
+
+    // 影片网盘分组: 格式 "mv:网盘类型:videoId"
+    const movieGroup = parseMovieGroupVodId(rawVideoId);
+    if (movieGroup) {
+      OmniBox.log("info", `蜗牛4K 影片分组链接: driveType=${movieGroup.driveType}, videoId=${movieGroup.videoId}`);
+      return await searchLinksByDriveForMovie(movieGroup.videoId, movieGroup.driveType);
+    }
+
+    // 网盘分类单条链接项: 格式 "分享链接|剧名"
+    const shareWithTitle = parseShareUrlWithTitle(rawVideoId);
+    if (shareWithTitle) {
+      OmniBox.log("info", `蜗牛4K 网盘单链接详情: 剧名=${shareWithTitle.title}`);
+      return await buildShareUrlDetail(shareWithTitle.shareURL, shareWithTitle.title);
+    }
+
+    // 兼容网盘分类跳转: 格式 "网盘类型|关键词"
+    const panGroup = parsePanGroupVodId(rawVideoId);
+    if (panGroup) {
+      OmniBox.log("info", `蜗牛4K 详情收到网盘分类ID,转分类处理: ${panGroup.driveType}/${panGroup.keyword}`);
+      return await searchVideosByDrive(panGroup.keyword, 1, panGroup.driveType);
+    }
+
     const videoId = normalizeVideoId(rawVideoId);
 
     if (!videoId) {
@@ -1430,41 +1720,15 @@ async function detail(params, context) {
     // 支持直接推送网盘分享链接
     if (/^https?:\/\//i.test(String(videoId)) && isPanShareUrl(videoId)) {
       const shareURL = normalizeShareUrl(videoId);
-      const driveInfo = await getDriveInfoCached(shareURL);
-      const displayName = driveInfo?.displayName || "网盘";
-      const fileList = await getRootFileListCached(shareURL);
-      const allVideoFiles = await getAllVideoFilesCached(shareURL, fileList?.files || []);
-      const episodes = (allVideoFiles || []).map((file) => {
-        const fileName = file.file_name || "";
-        const fileId = file.fid || "";
-        const fileSize = file.size || file.file_size || 0;
-        const basePlayId = fileId ? `${shareURL}|${fileId}` : "";
-        let displayFileName = fileName;
-        if (fileSize > 0) {
-          const fileSizeStr = formatFileSize(fileSize);
-          if (fileSizeStr) displayFileName = `[${fileSizeStr}] ${fileName}`;
-        }
-        return {
-          name: displayFileName,
-          playId: basePlayId,
-          size: fileSize > 0 ? fileSize : undefined,
-          rawName: fileName,
-        };
-      }).filter((ep) => ep.name && ep.playId);
-      return {
-        list: [{
-          vod_id: shareURL,
-          vod_name: `${displayName}推送`,
-          vod_pic: "",
-          vod_content: shareURL,
-          vod_play_sources: episodes.length > 0 ? [{ name: displayName, episodes }] : undefined,
-          vod_remarks: "网盘推送",
-        }],
-      };
+      OmniBox.log("info", `蜗牛4K 网盘推送详情: ${shareURL}`);
+      return await buildShareUrlDetail(shareURL, "");
     }
 
     const source = params.source || "";
     OmniBox.log("info", `蜗牛4K 获取视频详情: videoId=${videoId}, source=${source}`);
+
+    // 未登录时尝试自动登录（已配置用户名密码时），确保能拿到完整网盘链接
+    await ensureLogin();
 
     const detailPath = buildDetailPath(videoId);
     const detailPage = await getDetailPageCached(detailPath);
@@ -1486,6 +1750,17 @@ async function detail(params, context) {
 
     const panUrls = extractPanUrls($).map(normalizeShareUrl).filter(Boolean);
     logDetailDebug(`解析完成,网盘链接数=${panUrls.length}`);
+
+    // 影片详情按网盘分组返回(避免一次性枚举全部链接触发风控); 正常流程影片走 category(mvg:...), 此处为兜底
+    const driveGroupList = buildMovieDriveGroups(videoId, vodName, vodPic, panUrls);
+    if (driveGroupList.length > 0) {
+      OmniBox.log("info", `蜗牛4K 影片转网盘分组: ${driveGroupList.length}个分组`);
+      return { list: driveGroupList, page: 1, pagecount: 1, total: driveGroupList.length };
+    }
+
+    // 未解析到任何网盘链接(如锁定页/未登录), 直接返回空, 不进入慢速枚举
+    OmniBox.log("warn", `蜗牛4K 影片 ${videoId} 未解析到网盘链接`);
+    return { list: [], page: 1, pagecount: 0, total: 0 };
 
     let playSources = [];
 
@@ -1715,6 +1990,421 @@ async function detail(params, context) {
   }
 }
 
+// ==================== 网盘分组 ====================
+const PAN_NAMES = {
+  "115": "115网盘",
+  quark: "夸克网盘",
+  uc: "UC网盘",
+  baidu: "百度网盘",
+  tianyi: "天翼云盘",
+  aliyun: "阿里云盘",
+  xunlei: "迅雷网盘",
+  pan123: "123云盘",
+  cmcc: "移动云盘",
+};
+
+function inferDriveTypeFromShareURL(shareURL = "") {
+  const raw = String(shareURL || "").toLowerCase();
+  if (!raw) return "";
+  if (raw.includes("pan.quark.cn") || raw.includes("drive.quark.cn")) return "quark";
+  if (raw.includes("drive.uc.cn") || raw.includes("fast.uc.cn")) return "uc";
+  if (raw.includes("pan.baidu.com")) return "baidu";
+  if (raw.includes("cloud.189.cn")) return "tianyi";
+  if (raw.includes("yun.139.com")) return "cmcc";
+  if (raw.includes("aliyundrive.com") || raw.includes("alipan.com")) return "aliyun";
+  if (raw.includes("pan.xunlei.com")) return "xunlei";
+  if (raw.includes("115.com") || raw.includes("115cdn.com") || raw.includes("anxia.com")) return "115";
+  if (raw.includes("123pan.com") || raw.includes("123684.com") || raw.includes("123865.com") || raw.includes("123912.com")) return "pan123";
+  return "";
+}
+
+const PANCHECK_PLATFORM_ALL = ["quark", "uc", "baidu", "tianyi", "pan123", "pan115", "aliyun", "xunlei", "cmcc"];
+
+function toPanCheckPlatformName(driveType = "") {
+  const t = String(driveType || "").toLowerCase().trim();
+  if (t === "115" || t === "pan_115" || t === "pan115") return "pan115";
+  if (PANCHECK_PLATFORM_ALL.includes(t)) return t;
+  return "";
+}
+
+async function checkLinksWithPanCheck(links) {
+  if (!PANCHECK_ENABLED || !PANCHECK_API || !Array.isArray(links) || links.length === 0) {
+    return { invalidLinksSet: new Set(), stats: null };
+  }
+  try {
+    const linksToCheck = links.filter(Boolean);
+    const platforms = [];
+    for (const link of linksToCheck) {
+      const p = toPanCheckPlatformName(inferDriveTypeFromShareURL(link));
+      if (p && !platforms.includes(p)) platforms.push(p);
+    }
+    const selectedPlatforms = platforms.length > 0 ? platforms : [...PANCHECK_PLATFORM_ALL];
+
+    OmniBox.log("info", `开始调用 PanCheck 检测链接, 总链接: ${linksToCheck.length}, 平台: ${selectedPlatforms.join(",")}`);
+
+    const requestBody = { links: linksToCheck, selected_platforms: selectedPlatforms };
+
+    const response = await axios({
+      url: `${PANCHECK_API}/api/v1/links/check`,
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
+      },
+      data: JSON.stringify(requestBody),
+      timeout: 60000,
+      validateStatus: () => true,
+      responseType: "text",
+    });
+
+    const bodyText = String(response.data || "");
+    if (response.status !== 200) {
+      OmniBox.log("warn", `PanCheck API 响应错误: ${response.status}, body=${bodyText.slice(0, 300)}`);
+      return { invalidLinksSet: new Set(), stats: null };
+    }
+
+    let data = {};
+    try {
+      data = JSON.parse(bodyText || "{}");
+    } catch (e) {
+      OmniBox.log("warn", `PanCheck 响应不是合法 JSON, body=${bodyText.slice(0, 500)}`);
+      return { invalidLinksSet: new Set(), stats: null };
+    }
+
+    const invalidLinks = data.invalid_links || data.invalidLinks || [];
+    return {
+      invalidLinksSet: new Set(invalidLinks),
+      stats: {
+        submitted: linksToCheck.length,
+        valid: (data.valid_links || data.validLinks || []).length,
+        invalid: invalidLinks.length,
+        pending: (data.pending_links || []).length,
+        duration: data.total_duration != null ? Number(data.total_duration) : null,
+        submissionId: data.submission_id != null ? data.submission_id : null,
+      },
+    };
+  } catch (error) {
+    OmniBox.log("warn", `PanCheck 链接检测失败: ${error.message}`);
+    return { invalidLinksSet: new Set(), stats: null };
+  }
+}
+
+async function getVideoDriveTypes(videoId) {
+  try {
+    const detailPath = buildDetailPath(videoId);
+    const { response } = await getDetailPageCached(detailPath);
+    if (!response || response.statusCode !== 200 || !response.body) return [];
+    const $ = cheerio.load(response.body);
+    const driveTypes = new Set();
+    for (const url of extractPanUrls($)) {
+      const t = inferDriveTypeFromShareURL(url);
+      if (t) driveTypes.add(t);
+    }
+    return [...driveTypes];
+  } catch (error) {
+    OmniBox.log("warn", `获取视频网盘类型失败: ${videoId}, ${error.message}`);
+    return [];
+  }
+}
+
+async function mapWithConcurrency(items, limit, fn) {
+  const results = new Array(items.length);
+  let index = 0;
+  const workers = Array.from({ length: Math.min(limit, items.length) }, async () => {
+    while (index < items.length) {
+      const i = index++;
+      results[i] = await fn(items[i], i);
+    }
+  });
+  await Promise.all(workers);
+  return results;
+}
+
+function parsePanGroupVodId(vodId = "") {
+  const raw = String(vodId || "").trim();
+  if (!raw.includes("|")) return null;
+  const idx = raw.indexOf("|");
+  const driveType = raw.slice(0, idx).trim();
+  const keyword = raw.slice(idx + 1).trim();
+  if (!driveType || !keyword) return null;
+  return { driveType, keyword };
+}
+
+async function getMovieDriveGroups(videoId) {
+  const cacheKey = buildCacheKey("woniu4k:movieGroups", videoId);
+  const cached = await getCachedJSON(cacheKey);
+  if (cached && Array.isArray(cached.list)) {
+    OmniBox.log("info", `命中影片分组缓存: ${videoId}`);
+    return cached;
+  }
+
+  await ensureLogin();
+
+  const detailPath = buildDetailPath(videoId);
+  const detailPage = await getDetailPageCached(detailPath);
+  const { response, baseUrl } = detailPage;
+  if (response.statusCode !== 200 || !response.body) {
+    return { list: [], page: 1, pagecount: 0, total: 0 };
+  }
+
+  const $ = cheerio.load(response.body);
+  const { vodName, vodPic } = parseVodBaseInfo($, baseUrl);
+  const panUrls = extractPanUrls($).map(normalizeShareUrl).filter(Boolean);
+  const groups = buildMovieDriveGroups(videoId, vodName, vodPic, panUrls);
+
+  const result = { list: groups, page: 1, pagecount: 1, total: groups.length };
+  if (groups.length > 0) {
+    OmniBox.log("info", `蜗牛4K 影片 ${videoId} 分组数量=${groups.length}`);
+    await setCachedJSON(cacheKey, result, 3600);
+  } else {
+    OmniBox.log("warn", `蜗牛4K 影片 ${videoId} 未解析到网盘链接, 不缓存`);
+  }
+  return result;
+}
+
+function wrapMovieAsGroupItem(movie) {
+  const vid = normalizeVideoId(movie.vod_id || movie.vod_name || "");
+  if (!vid) return movie;
+  return {
+    vod_id: `mvg:${vid}`,
+    vod_name: movie.vod_name || "",
+    vod_pic: movie.vod_pic || "",
+    vod_remarks: movie.vod_remarks || "",
+    type_id: "pan_category",
+    type_name: "网盘",
+    vod_tag: "folder",
+    panType: "mvg",
+  };
+}
+
+function buildMovieDriveGroups(videoId, vodName, vodPic, panUrls) {
+  const byType = {};
+  let unknown = 0;
+  for (const url of (panUrls || [])) {
+    const t = inferDriveTypeFromShareURL(url);
+    if (t) byType[t] = (byType[t] || 0) + 1;
+    else unknown += 1;
+  }
+  const items = [];
+  for (const [driveType, count] of Object.entries(byType)) {
+    const panName = PAN_NAMES[driveType] || driveType;
+    items.push({
+      vod_id: `mv:${driveType}:${videoId}`,
+      vod_name: panName,
+      vod_pic: vodPic || "",
+      type_id: "pan_category",
+      type_name: "网盘分类",
+      vod_remarks: `${count}条`,
+      vod_tag: "folder",
+      panType: driveType,
+    });
+  }
+  if (unknown > 0) {
+    items.push({
+      vod_id: `mv:other:${videoId}`,
+      vod_name: "其他网盘",
+      vod_pic: vodPic || "",
+      type_id: "pan_category",
+      type_name: "网盘分类",
+      vod_remarks: `${unknown}条`,
+      vod_tag: "folder",
+      panType: "other",
+    });
+  }
+  if (items.length > 1) items.sort((a, b) => a.vod_name.localeCompare(b.vod_name, "zh-CN"));
+  return items;
+}
+
+async function searchLinksByDriveForMovie(videoId, driveType) {
+  const cacheKey = buildCacheKey("woniu4k:searchDrive", `mv:${driveType}:${videoId}`);
+  const cached = await getCachedJSON(cacheKey);
+  if (cached && Array.isArray(cached.list) && cached.list.length > 0) {
+    OmniBox.log("info", `命中影片分组链接缓存: ${driveType}:${videoId}`);
+    return cached;
+  }
+
+  await ensureLogin();
+
+  const detailPath = buildDetailPath(videoId);
+  const detailPage = await getDetailPageCached(detailPath);
+  const { response, baseUrl } = detailPage;
+  if (response.statusCode !== 200 || !response.body) {
+    return { list: [], page: 1, pagecount: 0, total: 0 };
+  }
+
+  const $ = cheerio.load(response.body);
+  const { vodName, vodPic } = parseVodBaseInfo($, baseUrl);
+  const panName = PAN_NAMES[driveType] || "其他网盘";
+  const linkItems = [];
+  let index = 0;
+  const seen = new Set();
+  const noTypeFilter = !driveType || driveType === "other" || driveType === "all";
+  for (const url of extractPanUrls($).map(normalizeShareUrl).filter(Boolean)) {
+    if (!noTypeFilter && inferDriveTypeFromShareURL(url) !== driveType) continue;
+    const shareURL = normalizeShareUrl(url);
+    if (!shareURL || seen.has(shareURL)) continue;
+    seen.add(shareURL);
+    index += 1;
+    const movieTitle = String(vodName || "").trim();
+    linkItems.push({
+      vod_id: movieTitle ? `${shareURL}|${movieTitle}` : shareURL,
+      vod_name: `${panName} ${index}`,
+      vod_pic: vodPic || "",
+      type_id: driveType,
+      type_name: panName,
+      vod_remarks: vodName || panName,
+      panUrl: shareURL,
+    });
+  }
+
+  const result = { list: linkItems, page: 1, pagecount: 1, total: linkItems.length };
+  if (linkItems.length > 0 && PANCHECK_API) {
+    const { invalidLinksSet, stats } = await checkLinksWithPanCheck(linkItems.map((item) => item.panUrl));
+    const before = linkItems.length;
+    const validItems = linkItems.filter((item) => !invalidLinksSet.has(item.panUrl));
+    const durStr = stats && stats.duration != null
+      ? (stats.duration >= 1000 ? (stats.duration / 1000).toFixed(1) + "s" : stats.duration + "ms")
+      : "-";
+    OmniBox.log("info", `==== PanCheck 检测: 提交${stats ? stats.submitted : "-"}, 有效${stats ? stats.valid : "-"}, 失效${stats ? stats.invalid : "-"}, 待定${stats ? stats.pending : "-"}, 耗时${durStr}, id=${stats ? stats.submissionId : "-"} | 过滤: ${before}→${validItems.length} ====`);
+    linkItems.length = 0;
+    linkItems.push(...validItems);
+    result.list = validItems;
+    result.total = validItems.length;
+  }
+
+  if (result.list.length > 0) {
+    OmniBox.log("info", `蜗牛4K 影片 ${driveType}:${videoId} 链接数量=${result.list.length}`);
+    await setCachedJSON(cacheKey, result, 3600);
+  } else {
+    OmniBox.log("warn", `蜗牛4K 影片 ${driveType}:${videoId} 无有效链接, 不缓存`);
+  }
+  return result;
+}
+
+async function searchVideosByDrive(keyword, page, driveType) {
+  const cacheKey = buildCacheKey("woniu4k:searchDrive", `v7:${driveType}:${keyword}:${page}`);
+  const cached = await getCachedJSON(cacheKey);
+  if (cached && Array.isArray(cached.list) && cached.list.length > 0) {
+    OmniBox.log("info", `命中网盘分组结果缓存: ${driveType}:${keyword}:${page}`);
+    return cached;
+  }
+
+  // 抓详情判断网盘类型前确保已登录(否则详情页是锁定版, 无网盘链接)
+  await ensureLogin();
+
+  const searchPath = buildSearchPath(keyword, page);
+  const { response, baseUrl } = await requestWithFailover(searchPath);
+  if (response.statusCode !== 200 || !response.body) {
+    return { list: [], page: page, pagecount: 0, total: 0 };
+  }
+
+  const videos = parseListFromHtml(response.body, baseUrl);
+  const panName = PAN_NAMES[driveType] || driveType;
+  const linkItems = [];
+
+  const results = await mapWithConcurrency(videos, 3, async (video) => {
+    try {
+      const detailPath = buildDetailPath(video.vod_id);
+      const { response: detailResponse } = await getDetailPageCached(detailPath);
+      if (!detailResponse || detailResponse.statusCode !== 200 || !detailResponse.body) return [];
+      const $ = cheerio.load(detailResponse.body);
+      return extractPanItems($).filter((item) => inferDriveTypeFromShareURL(item.url) === driveType);
+    } catch (error) {
+      OmniBox.log("warn", `获取视频 ${video.vod_id} 的网盘链接失败: ${error.message}`);
+      return [];
+    }
+  });
+
+  let globalIndex = 0;
+  results.forEach((matched, vi) => {
+    const video = videos[vi];
+    matched.forEach((item) => {
+      const shareURL = normalizeShareUrl(item.url);
+      if (!shareURL) return;
+      globalIndex += 1;
+      const movieTitle = String(video.vod_name || "").trim();
+      linkItems.push({
+        vod_id: movieTitle ? `${shareURL}|${movieTitle}` : shareURL,
+        vod_name: item.name || `${panName} ${globalIndex}`,
+        vod_pic: video.vod_pic || "",
+        type_id: driveType,
+        type_name: panName,
+        vod_remarks: video.vod_name || panName,
+        panUrl: shareURL,
+      });
+    });
+  });
+
+  const result = { list: linkItems, page: page, pagecount: 1, total: linkItems.length };
+  if (linkItems.length > 0) {
+    // PanCheck 检测链接有效性, 失效的直接丢弃
+    if (PANCHECK_API) {
+      const { invalidLinksSet, stats } = await checkLinksWithPanCheck(linkItems.map((item) => item.panUrl));
+      const before = linkItems.length;
+      const validItems = linkItems.filter((item) => !invalidLinksSet.has(item.panUrl));
+      const durStr = stats && stats.duration != null
+        ? (stats.duration >= 1000 ? (stats.duration / 1000).toFixed(1) + "s" : stats.duration + "ms")
+        : "-";
+      OmniBox.log("info", `==== PanCheck 检测: 提交${stats ? stats.submitted : "-"}, 有效${stats ? stats.valid : "-"}, 失效${stats ? stats.invalid : "-"}, 待定${stats ? stats.pending : "-"}, 耗时${durStr}, id=${stats ? stats.submissionId : "-"} | 过滤: ${before}→${validItems.length} ====`);
+      linkItems.length = 0;
+      linkItems.push(...validItems);
+      result.list = validItems;
+      result.total = validItems.length;
+    }
+  }
+  if (result.list.length > 0) {
+    OmniBox.log("info", `蜗牛4K 网盘分组 ${driveType}:${keyword} 链接数量=${result.list.length}`);
+    await setCachedJSON(cacheKey, result, 3600);
+  } else {
+    OmniBox.log("warn", `蜗牛4K 网盘分组 ${driveType}:${keyword} 无链接结果, 不缓存(下次点击会重新尝试)`);
+  }
+  return result;
+}
+
+async function buildDriveGroupedSearch(keyword, videos) {
+  const grouped = {};
+  const items = [];
+
+  const results = await mapWithConcurrency(videos, 3, async (video) => {
+    const drives = await getVideoDriveTypes(video.vod_id);
+    return { video, drives };
+  });
+
+  for (const { video, drives } of results) {
+    for (const driveType of drives) {
+      if (!grouped[driveType]) grouped[driveType] = [];
+      grouped[driveType].push(video);
+    }
+  }
+
+  for (const [driveType, list] of Object.entries(grouped)) {
+    items.push({
+      vod_id: `${driveType}|${keyword}`,
+      vod_name: PAN_NAMES[driveType] || driveType,
+      vod_pic: "",
+      type_id: "pan_category",
+      type_name: "网盘分类",
+      vod_remarks: `${list.length}部`,
+      vod_tag: "folder",
+      panType: driveType,
+    });
+  }
+
+  items.sort((a, b) => {
+    const ta = a.panType === "aliyun" ? "ali" : a.panType;
+    const tb = b.panType === "aliyun" ? "ali" : b.panType;
+    const ia = DRIVE_ORDER.indexOf(ta);
+    const ib = DRIVE_ORDER.indexOf(tb);
+    if (ia === -1 && ib === -1) return 0;
+    if (ia === -1) return 1;
+    if (ib === -1) return -1;
+    return ia - ib;
+  });
+
+  return items;
+}
+// ==================== 网盘分组结束 ====================
+
 /**
  * 搜索视频
  */
@@ -1722,7 +2412,6 @@ async function search(params) {
   try {
     const keyword = params.keyword || params.wd || params.key || "";
     const page = parseInt(params.page || "1", 10);
-
     OmniBox.log("info", `蜗牛4K 搜索视频: keyword=${keyword}, page=${page}`);
 
     if (!keyword) {
@@ -1770,8 +2459,34 @@ async function search(params) {
 
     OmniBox.log("info", `蜗牛4K 搜索完成,找到 ${videos.length} 个结果`);
 
+    // 按网盘分组: 先返回网盘分类列表, 点击分类后再返回该网盘下的视频
+    if (videos.length > 0) {
+      try {
+        await ensureLogin();
+        const groupCacheKey = buildCacheKey("woniu4k:searchGroup", keyword);
+        let groupedList = await getCachedJSON(groupCacheKey);
+        if (!groupedList) {
+          groupedList = await buildDriveGroupedSearch(keyword, videos);
+          if (groupedList.length > 0) {
+            await setCachedJSON(groupCacheKey, groupedList, 3600);
+          }
+        }
+        if (groupedList && groupedList.length > 0) {
+          OmniBox.log("info", `蜗牛4K 搜索按网盘分组完成,分类数量=${groupedList.length}`);
+          return {
+            list: groupedList,
+            page: page,
+            pagecount: 1,
+            total: groupedList.length,
+          };
+        }
+      } catch (error) {
+        OmniBox.log("warn", `蜗牛4K 搜索分组失败,回退原始列表: ${error.message}`);
+      }
+    }
+
     return {
-      list: videos,
+      list: (videos || []).map(wrapMovieAsGroupItem),
       page: page,
       pagecount: pagecount,
       total: videos.length,
@@ -2005,10 +2720,23 @@ async function getDynamicFilters() {
 
 // ==================== 登录功能 ====================
 
+async function ensureLogin() {
+  if (hasAuthCookies()) {
+    return true;
+  }
+  if (LOGIN_USERNAME && LOGIN_PASSWORD) {
+    const result = await login({ autoCaptcha: true, maxAttempts: 2 });
+    return result && result.code === 1;
+  }
+  return false;
+}
+
 async function login(params) {
   const username = String(params?.username || LOGIN_USERNAME || "").trim();
   const password = String(params?.password || LOGIN_PASSWORD || "").trim();
   const captchaCode = String(params?.captcha || params?.verify || "").trim();
+  const autoCaptcha = params?.autoCaptcha !== false;
+  const maxAttempts = Math.max(1, parseInt(params?.maxAttempts || "3", 10) || 3);
 
   if (!username || !password) {
     OmniBox.log("warn", "蜗牛4K 登录失败: 用户名或密码为空，请设置 WONIU4K_USERNAME / WONIU4K_PASSWORD");
@@ -2017,63 +2745,95 @@ async function login(params) {
 
   OmniBox.log("info", "蜗牛4K 开始登录");
 
-  try {
-    // 获取登录页，建立 session、获取验证码
-    const loginPage = await httpRequest(WEB_SITES[0] + "/user/login/", { timeout: 15000 });
-    const $ = cheerio.load(loginPage.body || "");
+  let verifyUrl = "";
+  let lastResult = { code: -1, msg: "登录未执行" };
 
-    const hasVerify = $("#verify").length > 0 || $("#verify_img").length > 0;
-
-    // 如果有验证码但没有提供，返回验证码图片信息
-    if (hasVerify && !captchaCode) {
-      const verifySrc = $("#verify_img").attr("src") || "";
-      const verifyUrl = verifySrc ? absUrl(verifySrc, WEB_SITES[0]) : "";
-      OmniBox.log("info", "蜗牛4K 登录需要验证码, 请通过 captcha 参数提供验证码");
-      return {
-        code: -2,
-        msg: "需要验证码",
-        verifyUrl,
-        verifyImg: verifyUrl,
-      };
-    }
-
-    // 构造 POST 数据
-    const formData = new URLSearchParams();
-    formData.append("user_name", username);
-    formData.append("user_pwd", password);
-    if (captchaCode) {
-      formData.append("verify", captchaCode);
-    }
-
-    const loginResult = await httpRequest(WEB_SITES[0] + "/user/login.html", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/x-www-form-urlencoded",
-        "X-Requested-With": "XMLHttpRequest",
-        Referer: WEB_SITES[0] + "/user/login/",
-      },
-      body: formData.toString(),
-      timeout: 15000,
-    });
-
-    let result;
+  for (let attempt = 1; attempt <= maxAttempts; attempt++) {
     try {
-      result = JSON.parse(loginResult.body || "{}");
-    } catch {
-      result = { code: 0, msg: "登录响应解析失败" };
-    }
+      // 获取登录页，建立 session、获取验证码
+      const loginPage = await httpRequest(WEB_SITES[0] + "/user/login/", { timeout: 15000 });
+      const $ = cheerio.load(loginPage.body || "");
 
-    if (result.code === 1) {
-      OmniBox.log("info", "蜗牛4K 登录成功");
-    } else {
-      OmniBox.log("warn", `蜗牛4K 登录失败: ${result.msg || "未知错误"}`);
-    }
+      const verifySrc = $("#verify_img").attr("src") || $("#verify-img").attr("src") || "";
+      verifyUrl = verifySrc ? absUrl(verifySrc, WEB_SITES[0]) : "";
+      const hasVerify = verifyUrl.length > 0;
 
-    return result;
-  } catch (error) {
-    OmniBox.log("error", `蜗牛4K 登录异常: ${error.message}`);
-    return { code: -1, msg: error.message };
+      // 优先用外部传入的验证码，否则自动识别
+      let code = captchaCode;
+      if (hasVerify && !code && autoCaptcha) {
+        code = await solveCaptchaByUrl(verifyUrl);
+        if (!code) {
+          OmniBox.log("warn", `蜗牛4K 验证码识别失败(第${attempt}次), 换一张重试`);
+          await sleep(800);
+          continue;
+        }
+      }
+
+      if (hasVerify && !code) {
+        OmniBox.log("info", "蜗牛4K 登录需要验证码, 请通过 captcha 参数提供验证码");
+        return {
+          code: -2,
+          msg: "需要验证码",
+          verifyUrl,
+          verifyImg: verifyUrl,
+        };
+      }
+
+      // 构造 POST 数据
+      const formData = new URLSearchParams();
+      formData.append("user_name", username);
+      formData.append("user_pwd", password);
+      if (code) {
+        formData.append("verify", code);
+      }
+
+      const loginResult = await httpRequest(WEB_SITES[0] + "/user/login.html", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/x-www-form-urlencoded",
+          "X-Requested-With": "XMLHttpRequest",
+          Referer: WEB_SITES[0] + "/user/login/",
+        },
+        body: formData.toString(),
+        timeout: 15000,
+      });
+
+      let result;
+      try {
+        result = JSON.parse(loginResult.body || "{}");
+      } catch {
+        result = { code: 0, msg: "登录响应解析失败" };
+      }
+
+      lastResult = result;
+
+      if (result.code === 1) {
+        OmniBox.log("info", "蜗牛4K 登录成功");
+        return result;
+      }
+
+      const msg = String(result.msg || "");
+      const needRetry = hasVerify && /验证码|verify/i.test(msg) && autoCaptcha;
+      if (needRetry && attempt < maxAttempts) {
+        OmniBox.log("warn", `蜗牛4K 验证码错误(第${attempt}次): ${msg}, 换一张重试`);
+        await sleep(800);
+        continue;
+      }
+
+      OmniBox.log("warn", `蜗牛4K 登录失败: ${msg || "未知错误"}`);
+      return result;
+    } catch (error) {
+      lastResult = { code: -1, msg: error.message };
+      OmniBox.log("error", `蜗牛4K 登录异常(第${attempt}次): ${error.message}`);
+      if (attempt < maxAttempts) {
+        await sleep(1000);
+        continue;
+      }
+      return lastResult;
+    }
   }
+
+  return lastResult;
 }
 
 async function logout() {
