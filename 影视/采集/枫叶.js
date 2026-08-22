@@ -2,7 +2,7 @@
 // @author 梦
 // @description 影视站：支持首页、分类、详情、搜索与播放，补齐刮削、弹幕与播放记录，基于 https://www.budaichuchen.net
 // @dependencies cheerio
-// @version 1.1.1
+// @version 1.2.0
 // @downloadURL https://gh-proxy.org/https://github.com/Silent1566/OmniBox-Spider/raw/refs/heads/main/影视/采集/枫叶.js
 
 const OmniBox = require("omnibox_sdk");
@@ -478,9 +478,9 @@ async function category(params = {}) {
     const year = String(extend.year || "");
     const lang = String(extend.lang || "");
     const letter = String(extend.letter || "");
-    const url = `${BASE_URL}/cupfox-list/${categoryId}-${area}-${by}-${clazz}-${lang}-${letter}---${page}---${year}.html`;
-    const html = await getCachedText(`fengye:category:${categoryId}:${page}:${area}:${by}:${clazz}:${year}:${lang}:${letter}`, LIST_CACHE_TTL, () => requestText(url));
-    const list = parseHomeList(html);
+    const url = `${BASE_URL}/index.php/ajax/data?mid=1&tid=${encodeURIComponent(categoryId)}&page=${page}&limit=20${area ? `&area=${encodeURIComponent(area)}` : ""}${by !== "time" ? `&by=${encodeURIComponent(by)}` : ""}${clazz ? `&class=${encodeURIComponent(clazz)}` : ""}${year ? `&year=${encodeURIComponent(year)}` : ""}${lang ? `&lang=${encodeURIComponent(lang)}` : ""}`;
+    const html = await requestText(url);
+    const list = parseData(html);
     await OmniBox.log("info", `[枫叶][category] category=${categoryId} page=${page} count=${list.length}`);
     return {
       page,
@@ -499,9 +499,9 @@ async function search(params = {}) {
     const wd = normalizeText(params.wd || params.keyword || params.key || "");
     const page = Math.max(1, Number(params.page) || 1);
     if (!wd) return { list: [] };
-    const url = `${BASE_URL}/cupfox-search/${encodeURIComponent(wd)}----------${page}---.html`;
-    const html = await getCachedText(`fengye:search:${wd}:${page}`, SEARCH_CACHE_TTL, () => requestText(url));
-    const list = parseSearchList(html);
+    const url = `${BASE_URL}/index.php/ajax/suggest?mid=1&wd=${encodeURIComponent(wd)}&limit=30`;
+    const html = await requestText(url);
+    const list = parseSuggest(html);
     await OmniBox.log("info", `[枫叶][search] wd=${wd} page=${page} count=${list.length}`);
     return {
       page,
@@ -768,4 +768,50 @@ async function play(params = {}, context = {}) {
     await OmniBox.log("error", `[枫叶][play] ${e.message}`);
     return { parse: 1, url: "", urls: [], header: {}, danmaku: [] };
   }
+}
+
+
+function parseData(htmlText) {
+  try {
+    const data = JSON.parse(htmlText);
+    const arr = data && Array.isArray(data.list) ? data.list : [];
+    return arr
+      .map(function (it) {
+        return {
+          vod_id: String(it.vod_id),
+          vod_name: normalizeText(it.vod_name || ''),
+          vod_pic: fixPic(it.vod_pic || ''),
+          vod_remarks: normalizeText(it.vod_remarks || ''),
+        };
+      })
+      .filter(function (it) { return !!it.vod_id; });
+  } catch (e) {
+    return [];
+  }
+}
+
+function parseSuggest(htmlText) {
+  try {
+    const data = JSON.parse(htmlText);
+    const arr = data && Array.isArray(data.list) ? data.list : [];
+    return arr
+      .map(function (it) {
+        return {
+          vod_id: String(it.id),
+          vod_name: normalizeText(it.name || ''),
+          vod_pic: fixPic(it.pic || ''),
+          vod_remarks: normalizeText(it.remarks || ''),
+        };
+      })
+      .filter(function (it) { return !!it.vod_id; });
+  } catch (e) {
+    return [];
+  }
+}
+function fixPic(u) {
+  if (!u) return "";
+  u = String(u).replace(/&amp;/g, "&");
+  if (u.indexOf("//") === 0) return "https:" + u;
+  if (u.indexOf("/") === 0) return absoluteUrl(u);
+  return u;
 }
