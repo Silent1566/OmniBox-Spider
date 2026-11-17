@@ -1,0 +1,2329 @@
+﻿<!DOCTYPE html>
+<html lang="zh-CN">
+	<head>
+				<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+		<meta name="renderer" content="webkit">
+		<meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1" />
+		<meta content="width=device-width, initial-scale=1.0" name="viewport" />
+		<meta name="applicable-device" content="pc,mobile" />
+		<link rel="manifest" href="/manifest.json">
+		<link rel="apple-touch-icon" href="/pwa/icon-180.png">
+		<meta name="apple-mobile-web-app-capable" content="yes">
+		<meta id="ys-apple-status-bar-style" name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+		<meta name="apple-mobile-web-app-title" content="袋鼠影视">
+		<meta name="theme-color" content="#2b2a2a" id="ys-theme-color">
+		<script>
+		(function () {
+			var mode = "system";
+			try { mode = localStorage.getItem("ys_theme_mode") || "dark"; } catch (e) { mode = "dark"; }
+			if (mode !== "light" && mode !== "dark") { mode = "system"; }
+			var dark = mode === "dark" || (mode === "system" && window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches);
+			document.documentElement.setAttribute("data-theme-mode", mode);
+			document.documentElement.setAttribute("data-theme", dark ? "dark" : "light");
+			document.getElementById("ys-theme-color").setAttribute("content", dark ? "#2b2a2a" : "#f4f7fa");
+			var statusBarStyle = document.getElementById("ys-apple-status-bar-style");
+			if (statusBarStyle) { statusBarStyle.setAttribute("content", dark ? "black-translucent" : "default"); }
+		})();
+		</script>
+		<link rel="shortcut icon" href="/favicon.ico" type="image/x-icon" />
+		<link rel="alternate" type="application/rss+xml" title="袋鼠影视最新影片" href="/xml/rss.xml" />
+		<link rel="preconnect" href="https://community.codewave.163.com" crossorigin />
+		<link rel="preload" href="/templets/wapian/images/font/iconfont.woff?t=1496387062227" as="font" type="font/woff" crossorigin />
+		<link href="/templets/wapian/images/css/bootstrap.min.css" rel="stylesheet" type="text/css" />
+		<link rel="preload" href="/templets/wapian/images/font/iconfont.css" as="style" onload="this.onload=null;this.rel='stylesheet'">
+		<noscript><link href="/templets/wapian/images/font/iconfont.css" rel="stylesheet" type="text/css" /></noscript>
+		<link href="/templets/wapian/images/css/style.min.css?v=20260905a" rel="stylesheet" type="text/css" />
+		<link href="/templets/wapian/images/css/color.css" rel="stylesheet" type="text/css" />
+		<link href="/templets/wapian/images/css/theme-system.css?v=20260919a" rel="stylesheet" type="text/css" />
+		<script src="/templets/wapian/images/js/jquery.min.js" defer></script>
+		<script src="/templets/wapian/images/js/theme-mode.js?v=2026073102" defer></script>
+		<script src="/templets/wapian/images/js/mobile-toolbar.js?v=20260803a" defer></script>
+		<script src="/templets/wapian/images/js/web-search-assist.js?v=20260825c" defer></script>
+		<script src="/templets/wapian/images/js/video-metadata.js?v=2026072701" defer></script>
+		<script>var sitePath=''</script>
+		<script src="/js/common.js" defer></script>
+
+
+		
+		<link rel="preload" href="/templets/wapian/images/css/swiper.min.css" as="style" onload="this.onload=null;this.rel='stylesheet'">
+		<noscript><link href="/templets/wapian/images/css/swiper.min.css" rel="stylesheet" type="text/css" ></noscript>
+		<title>袋鼠影视 - 最新电影、电视剧、动漫、综艺在线观看</title>
+		<link rel="canonical" href="https://dsystv.com" />
+		<meta name="keywords" content="袋鼠影视,电影,电视剧,动漫,综艺,在线观看">
+		<meta name="description" content="袋鼠影视提供最新电影、热门电视剧、动漫和综艺节目资料及在线观看入口，支持多线路播放与剧集更新。">
+		<script type="application/ld+json">
+		{
+		  "@context": "https://schema.org",
+		  "@type": "WebSite",
+		  "name": "袋鼠影视",
+		  "url": "https://dsystv.com"
+		}
+		</script>
+	</head>
+	<body class="page-home">		
+		<div class="hy-head-menu">
+	<nav class="mobile-toolbar visible-xs" aria-label="手机快捷导航">
+		<a href="/" class="mobile-toolbar-action" title="首页" aria-label="首页">
+			<i class="icon iconfont icon-home" aria-hidden="true"></i>
+		</a>
+		<form class="mobile-toolbar-search" id="mobile-toolbar-search" action="/search.php" method="get" autocomplete="off" role="search">
+			<i class="icon iconfont icon-search" aria-hidden="true"></i>
+			<input name="searchword" type="search" placeholder="搜索影片、演员" aria-label="搜索影片" required>
+			<button type="submit" title="搜索" aria-label="搜索"><i class="icon iconfont icon-right" aria-hidden="true"></i></button>
+		</form>
+		<button class="mobile-toolbar-action mobile-history-toggle" type="button" title="观看历史" aria-label="观看历史" aria-expanded="false" aria-controls="mobile-watch-history-panel">
+			<i class="icon iconfont icon-record1" aria-hidden="true"></i>
+		</button>
+		<button class="mobile-toolbar-action mobile-menu-toggle" type="button" title="分类菜单" aria-label="分类菜单" aria-expanded="false" aria-controls="mobile-nav-panel">
+			<i class="icon iconfont icon-more" aria-hidden="true"></i>
+		</button>
+	</nav>
+	<div class="mobile-watch-history-panel visible-xs" id="mobile-watch-history-panel" hidden>
+		<div class="mobile-watch-history-head">
+			<strong>观看历史</strong>
+			<button type="button" class="mobile-watch-history-clear">清空</button>
+		</div>
+		<div class="mobile-watch-history-list"></div>
+	</div>
+	<div class="mobile-nav-panel visible-xs" id="mobile-nav-panel" hidden>
+		<div class="mobile-nav-grid">
+			
+			<a href="/frim/index1.html" class="mobile-nav-item">
+				<i class="icon iconfont icon-film" aria-hidden="true"></i>
+				<span>电影</span>
+			</a>
+			
+			<a href="/frim/index2.html" class="mobile-nav-item">
+				<i class="icon iconfont icon-show" aria-hidden="true"></i>
+				<span>电视剧</span>
+			</a>
+			
+			<a href="/frim/index3.html" class="mobile-nav-item">
+				<i class="icon iconfont icon-flag" aria-hidden="true"></i>
+				<span>综艺</span>
+			</a>
+			
+			<a href="/frim/index4.html" class="mobile-nav-item">
+				<i class="icon iconfont icon-mallanimation" aria-hidden="true"></i>
+				<span>动漫</span>
+			</a>
+			
+			<a href="/frim/index44.html" class="mobile-nav-item">
+				<i class="icon iconfont icon-fdvideo" aria-hidden="true"></i>
+				<span>短剧</span>
+			</a>
+			
+		</div>
+		<div class="mobile-nav-utility">
+			<a href="/gbook.php"><i class="icon iconfont icon-comment" aria-hidden="true"></i> 留言求片</a>
+			<a href="//daishu.one" target="_blank" rel="noopener"><i class="icon iconfont icon-download" aria-hidden="true"></i> APP下载</a>
+		</div>
+		<div class="theme-mode-control mobile-theme-control">
+			<div class="theme-mode-label"><i class="icon iconfont icon-setting" aria-hidden="true"></i><span>主题</span></div>
+			<div class="theme-mode-options" role="radiogroup" aria-label="主题模式">
+				<button type="button" data-theme-mode-option="system" aria-pressed="false">跟随系统</button>
+				<button type="button" data-theme-mode-option="light" aria-pressed="false">亮色</button>
+				<button type="button" data-theme-mode-option="dark" aria-pressed="false">暗色</button>
+			</div>
+		</div>
+	</div>
+	<div class="container">
+	    <div class="row">
+		  	<div class="item">
+			    <div class="logo hidden-xs">
+					<a class="hidden-sm hidden-xs" href="/"><img src="/templets/wapian/images/logo.png" width="120" height="50" alt="袋鼠影视首页" /></a>
+				</div>	
+				<div class="search">
+			     <form name="formsearch" id="formsearch" action='/search.php' method="get" autocomplete="off">
+			        <input class="form-control" placeholder="输入影片关键词..." name="searchword" type="text" id="keyword" required="">
+						<input type="submit" id="searchbutton" value="" class="hide">
+						<button type="submit" class="btns" title="搜索" aria-label="搜索"><i class="icon iconfont icon-search"></i></button>
+					</form>
+			   </div>
+			   <ul class="menulist hidden-xs">
+					<li><a href="/">首页</a></li> 
+										
+					<li><a href="/frim/index1.html">  电影</a></li>						
+					<li><a href="/frim/index2.html">  电视剧</a></li>						
+					<li><a href="/frim/index3.html">  综艺</a></li>						
+					<li><a href="/frim/index4.html">  动漫</a></li>						
+					<li><a href="/frim/index44.html">  短剧</a></li>		
+					<li><a href="//daishu.one" target="_blank" rel="noopener">APP下载</a></li>
+				</ul>										 
+		  	</div>							
+	    </div>
+	</div>
+</div>
+
+		<main id="main-content">
+		<h1 class="sr-only">袋鼠影视 - 最新电影、电视剧、动漫、综艺在线观看</h1>
+		
+		<!--main-->
+		<div class="container">
+			<div class="row">																					
+				<div class="hy-layout clearfix">
+					<div class="col-lg-7 col-md-6 col-sm-12">
+						<div class="swiper-container hy-slide">
+					        <div class="swiper-wrapper">				            			
+	            				
+	            				<div class="swiper-slide">
+	<div class="hy-video-slide">
+		<a class="videopic" href="/movie/index424701.html" title="年会不能停！2" style="padding-top: 60%;">	
+			<img src="https://community.codewave.163.com/upload/app/afaec238-82f5-4996-8fdd-0aae42f393de/年会不能停_2_1789852836_afaec238-82f5-4996-8fdd-0aae42f393de_efp2GSF3_20260920052036982.jpg" alt="《年会不能停！2》推荐海报" fetchpriority="high" decoding="async" />
+			<span class="title">年会不能停！2</span>
+	    </a>
+	</div>	            					
+</div>
+
+	            				
+	            				<div class="swiper-slide">
+	<div class="hy-video-slide">
+		<a class="videopic" href="/movie/index428428.html" title="深渊无间" style="padding-top: 60%;">	
+			<img src="https://community.codewave.163.com/upload/app/afaec238-82f5-4996-8fdd-0aae42f393de/深渊无间_1788988839_afaec238-82f5-4996-8fdd-0aae42f393de_efp7GFX2_20260910052040119.jpg" alt="《深渊无间》推荐海报" loading="lazy" decoding="async" />
+			<span class="title">深渊无间</span>
+	    </a>
+	</div>	            					
+</div>
+
+	            				
+	            				<div class="swiper-slide">
+	<div class="hy-video-slide">
+		<a class="videopic" href="/movie/index427726.html" title="花儿与少年第八季" style="padding-top: 60%;">	
+			<img src="https://community.codewave.163.com/upload/app/afaec238-82f5-4996-8fdd-0aae42f393de/花儿与少年第八季_1788556864_afaec238-82f5-4996-8fdd-0aae42f393de_efp5NDQ1_20260905052105352.jpg" alt="《花儿与少年第八季》推荐海报" loading="lazy" decoding="async" />
+			<span class="title">花儿与少年第八季</span>
+	    </a>
+	</div>	            					
+</div>
+
+	            										            		
+					        </div>
+					        <div class="swiper-button-next hidden-xs"></div>
+                    		<div class="swiper-button-prev hidden-xs"></div>
+					        <div class="swiper-pagination"></div>
+					    </div>					    					    						    
+					</div>
+					<div class="col-lg-5 col-md-6 col-sm-12 padding-0">
+						<div class="hy-index-menu clearfix">
+							<div class="item">
+								<ul class="clearfix">
+									<li class="hidden-sm hidden-xs">
+										<a href="/search.php?searchtype=5&tid=0" title="全部影片"><i class="icon iconfont icon-menu1 text-color"></i><span>全部影片</span></a>
+									</li>
+									<li>
+										<a href="/search.php?searchtype=5&order=hit" title="影片排行"><i class="icon iconfont icon-ic_mymatch_ranking text-color"></i><span>影片排行</span></a>
+									</li>
+									<li>
+										<a href="/latest.php" title="最近更新"><i class="icon iconfont icon-update text-color"></i><span>最近更新</span></a>
+									</li>									
+									<li>
+										<a href="/gbook.php" title="留言求片"><i class="icon iconfont icon-icon_special text-color"></i><span>留言求片</span></a>
+									</li>
+									<li class="visible-sm visible-xs">
+										<a href="//daishu.one" title="app下载" target="_blank" rel="noopener"><i class="icon iconfont icon-member1 text-color"></i><span>APP下载</span></a>
+									</li>
+								</ul>
+							</div>						
+						</div>						
+						<div class="hy-index-tags hidden-md clearfix">
+							<div class="item">
+								<ul class="clearfix">																
+									<li><a class="text-overflow" href="/search.php?searchtype=5&tid=5">动作片</a></li>
+<li><a class="text-overflow" href="/search.php?searchtype=5&tid=10">喜剧片</a></li>
+<li><a class="text-overflow" href="/search.php?searchtype=5&tid=7">科幻片</a></li>
+<li><a class="text-overflow" href="/search.php?searchtype=5&tid=8">恐怖片</a></li>
+<li><a class="text-overflow" href="/search.php?searchtype=5&tid=13">大陆剧</a></li>
+<li><a class="text-overflow" href="/search.php?searchtype=5&tid=15">欧美剧</a></li>
+<li><a class="text-overflow" href="/search.php?searchtype=5&tid=14">港台剧</a></li>
+<li><a class="text-overflow" href="/search.php?searchtype=5&tid=16">日韩剧</a></li>						
+								</ul>
+							</div>									
+						</div>
+						<div class="hy-right-qrcode hidden-sm hidden-xs">
+							<div class="item">
+								<dl class="clearfix">
+									<dt>
+										<img class="pic-responsive" src="/templets/wapian/images/rwm.png" alt="扫描二维码关注袋鼠影视公众号" width="120" height="120" loading="lazy" />
+									</dt>
+									<dd>
+										<p class="h4">扫描二维码“手机看大片”</p>
+										<p class="text-muted">也可以分享到朋友圈哦！</p>
+										<p class="margin-0 text-muted">https://dsystv.com</p>
+									</dd>
+								</dl>
+							</div>							
+						</div>																												
+					</div>
+				</div>
+				
+				<!--院线热映-->
+			    <div class="hy-layout clearfix">				    	
+		    		<div class="hy-video-head">
+						<h2 class="margin-0"><i class="icon iconfont icon-update text-color"></i> 院线热映</h2>
+						<ul class="pull-right">							
+							<li class="active"><a href="/search.php?searchtype=5&order=monthhit&tid=1" class="text-muted" title="更多">更多 <i class="icon iconfont icon-right"></i></a></li>
+						</ul>
+					</div>
+					<div class="clearfix">
+						<div class="hy-video-list clearfix">
+						    <div class="item">																			
+								
+							    <div class="col-md-2 col-sm-3 col-xs-4 ">						    	
+						    		<a class="videopic" href="/movie/index427901.html" title="交锋" style="background: url(/templets/wapian/images/load.gif) no-repeat; background-position:50% 50%; background-size: cover;" >								
+	<img class="lazy" src="/templets/wapian/images/load.gif" data-original="https://community.codewave.163.com/upload/app/afaec238-82f5-4996-8fdd-0aae42f393de/交锋_1788694873_afaec238-82f5-4996-8fdd-0aae42f393de_efp3GGE5_20260906194116382.webp" alt="《交锋》高清海报" loading="lazy" decoding="async" />
+	<span class="play hidden-xs"></span>										
+	<span class="score">7.5</span>
+	<span class="note textbg">已完结</span>							
+</a>
+
+<div class="title">
+
+	<h3 class="text-overflow"><a href="/movie/index427901.html" title="交锋">交锋</a></h3>
+
+</div>
+
+<div class="subtitle text-muted text-overflow hidden-xs">
+
+	王凯,周依然,欧豪,彭昱畅,成泰燊,齐欢,邱天,吴启华,吴越,岳旸,高鑫,高捷,祖峰,董勇
+
+</div>
+							    				    						
+								</div>
+								
+							    <div class="col-md-2 col-sm-3 col-xs-4 ">						    	
+						    		<a class="videopic" href="/movie/index420715.html" title="八仙！" style="background: url(/templets/wapian/images/load.gif) no-repeat; background-position:50% 50%; background-size: cover;" >								
+	<img class="lazy" src="/templets/wapian/images/load.gif" data-original="https://community.codewave.163.com/upload/app/afaec238-82f5-4996-8fdd-0aae42f393de/八仙_1784784161_afaec238-82f5-4996-8fdd-0aae42f393de_efp7TAE5_20260723132242900.webp" alt="《八仙！》高清海报" loading="lazy" decoding="async" />
+	<span class="play hidden-xs"></span>										
+	<span class="score">8.2</span>
+	<span class="note textbg">HD国语</span>							
+</a>
+
+<div class="title">
+
+	<h3 class="text-overflow"><a href="/movie/index420715.html" title="八仙！">八仙！</a></h3>
+
+</div>
+
+<div class="subtitle text-muted text-overflow hidden-xs">
+
+	陈浩,李绍哲,立冬,果子哥哥,董天弋,喻鹏力,黄豫硕,张运气,邓先森,曹知善,囧森瑟夫,零柒,韩雨泽,张天宇,张稷,良生
+
+</div>
+							    				    						
+								</div>
+								
+							    <div class="col-md-2 col-sm-3 col-xs-4 ">						    	
+						    		<a class="videopic" href="/movie/index426387.html" title="早春晴朗" style="background: url(/templets/wapian/images/load.gif) no-repeat; background-position:50% 50%; background-size: cover;" >								
+	<img class="lazy" src="/templets/wapian/images/load.gif" data-original="https://community.codewave.163.com/upload/app/afaec238-82f5-4996-8fdd-0aae42f393de/早春晴朗_1787718040_afaec238-82f5-4996-8fdd-0aae42f393de_efp7ISP9_20260826122041506.webp" alt="《早春晴朗》高清海报" loading="lazy" decoding="async" />
+	<span class="play hidden-xs"></span>										
+	<span class="score">6.7</span>
+	<span class="note textbg">完结</span>							
+</a>
+
+<div class="title">
+
+	<h3 class="text-overflow"><a href="/movie/index426387.html" title="早春晴朗">早春晴朗</a></h3>
+
+</div>
+
+<div class="subtitle text-muted text-overflow hidden-xs">
+
+	井柏然,孙千,刘小北,齐天晴,张晔子,宁心,赵振宇,张优,彭杨,郭晓婷,李川
+
+</div>
+							    				    						
+								</div>
+								
+							    <div class="col-md-2 col-sm-3 col-xs-4 ">						    	
+						    		<a class="videopic" href="/movie/index428790.html" title="兰香如故" style="background: url(/templets/wapian/images/load.gif) no-repeat; background-position:50% 50%; background-size: cover;" >								
+	<img class="lazy" src="/templets/wapian/images/load.gif" data-original="https://community.codewave.163.com/upload/app/afaec238-82f5-4996-8fdd-0aae42f393de/兰香如故_1789129273_afaec238-82f5-4996-8fdd-0aae42f393de_efp2TLA8_20260911202116210.webp" alt="《兰香如故》高清海报" loading="lazy" decoding="async" />
+	<span class="play hidden-xs"></span>										
+	
+	<span class="note textbg">更新至第26集</span>							
+</a>
+
+<div class="title">
+
+	<h3 class="text-overflow"><a href="/movie/index428790.html" title="兰香如故">兰香如故</a></h3>
+
+</div>
+
+<div class="subtitle text-muted text-overflow hidden-xs">
+
+	谭松韵,刘学义,李梦,郑合惠子,郭柯宇,吴甜甜,叶青,蒲萄,宋芳园,李嘉鑫,刘佳玺,牛骏峰,苏可,侯长荣,陈创,孔令美,魏子昕,吴晓东,严晓频,章申,刘美含,贺鹏,嘉泽,郭迦南,汤梦佳,马凡丁,关畅,赵秦,李泓良,吴天琪,柯蓝,董晴,沈泰,孔连顺,张铎,邬家楷,叶筱玮,马闻远,辛鹏,姚一奇,赵梓冲,辛浩江,王佳璇,王玉宁,孙仲秋,郑卫莉,王艺禅,王亚军,周知,奚望
+
+</div>
+							    				    						
+								</div>
+								
+							    <div class="col-md-2 col-sm-3 col-xs-4 ">						    	
+						    		<a class="videopic" href="/movie/index426186.html" title="夜王" style="background: url(/templets/wapian/images/load.gif) no-repeat; background-position:50% 50%; background-size: cover;" >								
+	<img class="lazy" src="/templets/wapian/images/load.gif" data-original="https://community.codewave.163.com/upload/app/afaec238-82f5-4996-8fdd-0aae42f393de/夜王_1787599236_afaec238-82f5-4996-8fdd-0aae42f393de_efp1JDV9_20260825032038396.webp" alt="《夜王》高清海报" loading="lazy" decoding="async" />
+	<span class="play hidden-xs"></span>										
+	<span class="score">7.8</span>
+	<span class="note textbg">HD导演版</span>							
+</a>
+
+<div class="title">
+
+	<h3 class="text-overflow"><a href="/movie/index426186.html" title="夜王">夜王</a></h3>
+
+</div>
+
+<div class="subtitle text-muted text-overflow hidden-xs">
+
+	黄子华,郑秀文,王丹妮,廖子妤,杨伟伦,谢君豪,卢镇业,何启华,杨偲泳,谭旻萱,李芯駖,林熙彤,邓丽英,蔡蕙琪,黄洁琪,赵君瑜,王紫影,黎纪君,董玮,甄懋强,许素莹,张可坚,徐浩昌,陈献略,邱颂伟,苏民峰,麦子云,廖颖琛
+
+</div>
+							    				    						
+								</div>
+								
+							    <div class="col-md-2 col-sm-3 col-xs-4 ">						    	
+						    		<a class="videopic" href="/movie/index428489.html" title="冬城猎凶" style="background: url(/templets/wapian/images/load.gif) no-repeat; background-position:50% 50%; background-size: cover;" >								
+	<img class="lazy" src="/templets/wapian/images/load.gif" data-original="https://community.codewave.163.com/upload/app/afaec238-82f5-4996-8fdd-0aae42f393de/冬城猎凶_1789014058_afaec238-82f5-4996-8fdd-0aae42f393de_efp8NNO1_20260910122100454.webp" alt="《冬城猎凶》高清海报" loading="lazy" decoding="async" />
+	<span class="play hidden-xs"></span>										
+	
+	<span class="note textbg">完结</span>							
+</a>
+
+<div class="title">
+
+	<h3 class="text-overflow"><a href="/movie/index428489.html" title="冬城猎凶">冬城猎凶</a></h3>
+
+</div>
+
+<div class="subtitle text-muted text-overflow hidden-xs">
+
+	王阳,万茜,余文乐,尹文萱 ,李纯,周逵,赵阳,赵龙豪,谭耀文,李梦男,李培铭,张澍,张琛,太保
+
+</div>
+							    				    						
+								</div>
+								
+							    <div class="col-md-2 col-sm-3 col-xs-4 ">						    	
+						    		<a class="videopic" href="/movie/index426506.html" title="醒来2026" style="background: url(/templets/wapian/images/load.gif) no-repeat; background-position:50% 50%; background-size: cover;" >								
+	<img class="lazy" src="/templets/wapian/images/load.gif" data-original="https://community.codewave.163.com/upload/app/afaec238-82f5-4996-8fdd-0aae42f393de/醒来2026_1787744440_afaec238-82f5-4996-8fdd-0aae42f393de_efp6GUX6_20260826194042849.webp" alt="《醒来2026》高清海报" loading="lazy" decoding="async" />
+	<span class="play hidden-xs"></span>										
+	<span class="score">6.8</span>
+	<span class="note textbg">已完结</span>							
+</a>
+
+<div class="title">
+
+	<h3 class="text-overflow"><a href="/movie/index426506.html" title="醒来2026">醒来2026</a></h3>
+
+</div>
+
+<div class="subtitle text-muted text-overflow hidden-xs">
+
+	欧豪,古力娜扎,冯绍峰,江疏影,梁洁,黄觉,黄尧,许芳铱,张铎,徐梵溪,倪寒尽,王子权,马渝捷,赫子铭,王策,王江一
+
+</div>
+							    				    						
+								</div>
+								
+							    <div class="col-md-2 col-sm-3 col-xs-4 ">						    	
+						    		<a class="videopic" href="/movie/index427226.html" title="重案六组：消失的警号" style="background: url(/templets/wapian/images/load.gif) no-repeat; background-position:50% 50%; background-size: cover;" >								
+	<img class="lazy" src="/templets/wapian/images/load.gif" data-original="https://community.codewave.163.com/upload/app/afaec238-82f5-4996-8fdd-0aae42f393de/重案六组消失的警号_1788147939_afaec238-82f5-4996-8fdd-0aae42f393de_efp6TNO4_20260831114541259.webp" alt="《重案六组：消失的警号》高清海报" loading="lazy" decoding="async" />
+	<span class="play hidden-xs"></span>										
+	<span class="score">4.4</span>
+	<span class="note textbg">完结</span>							
+</a>
+
+<div class="title">
+
+	<h3 class="text-overflow"><a href="/movie/index427226.html" title="重案六组：消失的警号">重案六组：消失的警号</a></h3>
+
+</div>
+
+<div class="subtitle text-muted text-overflow hidden-xs">
+
+	张一山,李沐宸,郭晓东,葛铮,赵明川,华雯,肖然,任若希,吴昊宸,丁圣霏,黄品沅,刘伟,迟嘉,鄂靖文,徐洋,郭鹏,赵梓冲,周思羽,刘頔,周劢劼,常方源,高飞,建康,丁文博,于小鸣,刘旭柏,左航,宋元,屠芷莹,罗刚,刘碑歌
+
+</div>
+							    				    						
+								</div>
+								
+							    <div class="col-md-2 col-sm-3 col-xs-4 ">						    	
+						    		<a class="videopic" href="/movie/index420307.html" title="奥德赛" style="background: url(/templets/wapian/images/load.gif) no-repeat; background-position:50% 50%; background-size: cover;" >								
+	<img class="lazy" src="/templets/wapian/images/load.gif" data-original="https://community.codewave.163.com/upload/app/afaec238-82f5-4996-8fdd-0aae42f393de/奥德赛_1784542945_afaec238-82f5-4996-8fdd-0aae42f393de_efp5TQF1_20260720182226853.webp" alt="《奥德赛》高清海报" loading="lazy" decoding="async" />
+	<span class="play hidden-xs"></span>										
+	<span class="score">8.6</span>
+	<span class="note textbg">HDTC中字</span>							
+</a>
+
+<div class="title">
+
+	<h3 class="text-overflow"><a href="/movie/index420307.html" title="奥德赛">奥德赛</a></h3>
+
+</div>
+
+<div class="subtitle text-muted text-overflow hidden-xs">
+
+	马特·达蒙,汤姆·霍兰德,安妮·海瑟薇,罗伯特·帕丁森,查理兹·塞隆,赞达亚,米娅·高斯,露皮塔·尼永奥,艾利奥特·佩吉,乔·博恩瑟,本·萨弗迪,萨曼莎·莫顿,约翰·雷吉扎莫,比尔·欧文,希米什·帕特尔,李威尹,科里·霍金斯,尼克·塔拉贝,吉米·冈萨雷斯,杰西·加西亚,柯斯莫·贾维斯,瑞恩·赫斯特,特拉维斯·斯科特
+
+</div>
+							    				    						
+								</div>
+								
+							    <div class="col-md-2 col-sm-3 col-xs-4 ">						    	
+						    		<a class="videopic" href="/movie/index427220.html" title="给阿嬷的情书" style="background: url(/templets/wapian/images/load.gif) no-repeat; background-position:50% 50%; background-size: cover;" >								
+	<img class="lazy" src="/templets/wapian/images/load.gif" data-original="https://community.codewave.163.com/upload/app/afaec238-82f5-4996-8fdd-0aae42f393de/给阿嬷的情书_1788138940_afaec238-82f5-4996-8fdd-0aae42f393de_efp6HUJ4_20260831091541605.webp" alt="《给阿嬷的情书》高清海报" loading="lazy" decoding="async" />
+	<span class="play hidden-xs"></span>										
+	<span class="score">9.3</span>
+	<span class="note textbg">更新至HD</span>							
+</a>
+
+<div class="title">
+
+	<h3 class="text-overflow"><a href="/movie/index427220.html" title="给阿嬷的情书">给阿嬷的情书</a></h3>
+
+</div>
+
+<div class="subtitle text-muted text-overflow hidden-xs">
+
+	李思潼,王彦桐,吴少卿,郑润奇,王晓慧,赵曙光,李德如,李树浩,乌萨·萨梅坎姆,方培松,钟少贤,郑鹏生,麦乐瑟,徐培涌
+
+</div>
+							    				    						
+								</div>
+								
+							    <div class="col-md-2 col-sm-3 col-xs-4 ">						    	
+						    		<a class="videopic" href="/movie/index426358.html" title="金色2026" style="background: url(/templets/wapian/images/load.gif) no-repeat; background-position:50% 50%; background-size: cover;" >								
+	<img class="lazy" src="/templets/wapian/images/load.gif" data-original="https://community.codewave.163.com/upload/app/afaec238-82f5-4996-8fdd-0aae42f393de/金色2026_1787651747_afaec238-82f5-4996-8fdd-0aae42f393de_efp0DZS6_20260825175549268.webp" alt="《金色2026》高清海报" loading="lazy" decoding="async" />
+	<span class="play hidden-xs"></span>										
+	<span class="score">6.7</span>
+	<span class="note textbg">已完结</span>							
+</a>
+
+<div class="title">
+
+	<h3 class="text-overflow"><a href="/movie/index426358.html" title="金色2026">金色2026</a></h3>
+
+</div>
+
+<div class="subtitle text-muted text-overflow hidden-xs">
+
+	辛芷蕾,尹昉,陈坤,高伟光,吴汉坤,卜冠今,尹铸胜,李易祥,连奕名,张百乔,郑仲恒,周小飞,洪洋,娄艺潇,贾康熙,曹骏博,葛铮
+
+</div>
+							    				    						
+								</div>
+								
+							    <div class="col-md-2 col-sm-3 col-xs-4 ">						    	
+						    		<a class="videopic" href="/movie/index428172.html" title="死有对证粤语" style="background: url(/templets/wapian/images/load.gif) no-repeat; background-position:50% 50%; background-size: cover;" >								
+	<img class="lazy" src="/templets/wapian/images/load.gif" data-original="https://community.codewave.163.com/upload/app/afaec238-82f5-4996-8fdd-0aae42f393de/死有对证粤语_1788790870_afaec238-82f5-4996-8fdd-0aae42f393de_efp2JTS4_20260907222113753.webp" alt="《死有对证粤语》高清海报" loading="lazy" decoding="async" />
+	<span class="play hidden-xs"></span>										
+	<span class="score">6.4</span>
+	<span class="note textbg">更新至第12集</span>							
+</a>
+
+<div class="title">
+
+	<h3 class="text-overflow"><a href="/movie/index428172.html" title="死有对证粤语">死有对证粤语</a></h3>
+
+</div>
+
+<div class="subtitle text-muted text-overflow hidden-xs">
+
+	韦家雄,陈晓华,车婉婉,马贯东,吴若希,阮浩棕,韩马利,杜燕歌,王绮琴,陈嘉辉,林熹瞳,唐嘉麟,王菲,谢芷伦,刘芷玲,刘颂鹏,崔锦棠,孟希璘,史颖乔,何伟业,陈少邦,乐嘉珈,张景尧,黄键丰,陈力行
+
+</div>
+							    				    						
+								</div>
+								
+							    <div class="col-md-2 col-sm-3 col-xs-4 visible-sm">						    	
+						    		<a class="videopic" href="/movie/index422175.html" title="蜘蛛侠：崭新之日" style="background: url(/templets/wapian/images/load.gif) no-repeat; background-position:50% 50%; background-size: cover;" >								
+	<img class="lazy" src="/templets/wapian/images/load.gif" data-original="https://community.codewave.163.com/upload/app/afaec238-82f5-4996-8fdd-0aae42f393de/蜘蛛侠崭新之日_1785507624_afaec238-82f5-4996-8fdd-0aae42f393de_efp3HVP5_20260731222025394.webp" alt="《蜘蛛侠：崭新之日》高清海报" loading="lazy" decoding="async" />
+	<span class="play hidden-xs"></span>										
+	<span class="score">7.8</span>
+	<span class="note textbg">HDTC中字</span>							
+</a>
+
+<div class="title">
+
+	<h3 class="text-overflow"><a href="/movie/index422175.html" title="蜘蛛侠：崭新之日">蜘蛛侠：崭新之日</a></h3>
+
+</div>
+
+<div class="subtitle text-muted text-overflow hidden-xs">
+
+	汤姆·霍兰德,赞达亚,萨迪·辛克,乔·博恩瑟,雅各布·贝塔隆,马克·鲁法洛,弗洛伦丝·皮尤,莉莎·科伦-扎亚斯,特拉梅尔·提尔曼,玛丽莎·托梅,迈克尔·曼多,娜奥米·沃茨,凯斯·大卫,马文·琼斯三世,奥利维亚·布斯-福特,艾曼·埃斯凡迪
+
+</div>
+							    				    						
+								</div>
+								
+							    <div class="col-md-2 col-sm-3 col-xs-4 visible-sm">						    	
+						    		<a class="videopic" href="/movie/index419066.html" title="功夫女足" style="background: url(/templets/wapian/images/load.gif) no-repeat; background-position:50% 50%; background-size: cover;" >								
+	<img class="lazy" src="/templets/wapian/images/load.gif" data-original="https://community.codewave.163.com/upload/app/afaec238-82f5-4996-8fdd-0aae42f393de/功夫女足_1783843350_afaec238-82f5-4996-8fdd-0aae42f393de_efp5HVT7_20260712160231264.webp" alt="《功夫女足》高清海报" loading="lazy" decoding="async" />
+	<span class="play hidden-xs"></span>										
+	<span class="score">6.3</span>
+	<span class="note textbg">TC国语</span>							
+</a>
+
+<div class="title">
+
+	<h3 class="text-overflow"><a href="/movie/index419066.html" title="功夫女足">功夫女足</a></h3>
+
+</div>
+
+<div class="subtitle text-muted text-overflow hidden-xs">
+
+	张小斐,迪丽热巴,张艺兴,刘嘉玲,佐藤健,艾米,雪野,蔡思贝,胡予安,倪好,赵丽娜,欧阳靖,张继聪,欧阳万成,陈旻,李卓媚,秦鹏飞,张天一,孙子七,洪蕾,施予斐,景如洋,李奕臻,赖迦童,葛依萱,王奕彤,马睎悦,邹霞,崔桐侥,张娣,张琪,房岩,邓月平,查恩雅·麦克洛里,许君聪,门腔,冯勉恒,唐香玉,李明远,苗溢伦,鄂靖文,AVANTGARDEY,张美娥,那迪,冯禧
+
+</div>
+							    				    						
+								</div>
+									
+							</div>
+						</div>					
+					</div>				
+					<div class="hy-video-footer visible-xs clearfix">
+						<a href="/search.php?searchtype=5&order=monthhit&tid=1" class="text-muted" title="查看更多">查看更多 <i class="icon iconfont icon-right pull-right"></i></a>
+					</div>		    																									
+				</div>
+				<!--end 院线热映-->
+										   
+			    <!--最近更新-->
+			    <div class="hy-layout clearfix">				    	
+		    		<div class="hy-video-head">
+						<h2 class="margin-0"><i class="icon iconfont icon-update text-color"></i> 最近更新</h2>
+						<ul class="pull-right">							
+							<li class="active">今日更新：90部影片<a href="/latest.php" class="text-muted" title="更多">更多 <i class="icon iconfont icon-right"></i></a></li>
+						</ul>
+					</div>
+					<div class="clearfix">
+						<div class="hy-video-list clearfix">
+						    <div class="item">																			
+								
+							    <div class="col-md-2 col-sm-3 col-xs-4 ">						    	
+						    		<a class="videopic" href="/movie/index429656.html" title="法医秦明之龙番往事" style="background: url(/templets/wapian/images/load.gif) no-repeat; background-position:50% 50%; background-size: cover;" >								
+	<img class="lazy" src="/templets/wapian/images/load.gif" data-original="https://community.codewave.163.com/upload/app/afaec238-82f5-4996-8fdd-0aae42f393de/法医秦明之龙番往事_1790071866_afaec238-82f5-4996-8fdd-0aae42f393de_efp6YDV5_20260922181110176.webp" alt="《法医秦明之龙番往事》高清海报" loading="lazy" decoding="async" />
+	<span class="play hidden-xs"></span>										
+	
+	<span class="note textbg">更新至第04集</span>							
+</a>
+
+<div class="title">
+
+	<h3 class="text-overflow"><a href="/movie/index429656.html" title="法医秦明之龙番往事">法医秦明之龙番往事</a></h3>
+
+</div>
+
+<div class="subtitle text-muted text-overflow hidden-xs">
+
+	俞灏明,史策,王晓晨,刘天佐,马吟吟,范雷,姚安濂,吕一丁,都桂宇,马嘉铭,魏晓东,尹智玄,李萌萌,孙鹏滨,李沐泽
+
+</div>
+							    				    						
+								</div>
+								
+							    <div class="col-md-2 col-sm-3 col-xs-4 ">						    	
+						    		<a class="videopic" href="/movie/index428426.html" title="毒潮：白粉飞纪事" style="background: url(/templets/wapian/images/load.gif) no-repeat; background-position:50% 50%; background-size: cover;" >								
+	<img class="lazy" src="/templets/wapian/images/load.gif" data-original="https://community.codewave.163.com/upload/app/afaec238-82f5-4996-8fdd-0aae42f393de/毒潮白粉飞纪事_1788942076_afaec238-82f5-4996-8fdd-0aae42f393de_efp2BBA5_20260909162118174.webp" alt="《毒潮：白粉飞纪事》高清海报" loading="lazy" decoding="async" />
+	<span class="play hidden-xs"></span>										
+	
+	<span class="note textbg">更新至第3集</span>							
+</a>
+
+<div class="title">
+
+	<h3 class="text-overflow"><a href="/movie/index428426.html" title="毒潮：白粉飞纪事">毒潮：白粉飞纪事</a></h3>
+
+</div>
+
+<div class="subtitle text-muted text-overflow hidden-xs">
+
+	盖尔·比恩,Isaiah John
+
+</div>
+							    				    						
+								</div>
+								
+							    <div class="col-md-2 col-sm-3 col-xs-4 ">						    	
+						    		<a class="videopic" href="/movie/index424202.html" title="女警出更第二季" style="background: url(/templets/wapian/images/load.gif) no-repeat; background-position:50% 50%; background-size: cover;" >								
+	<img class="lazy" src="/templets/wapian/images/load.gif" data-original="https://community.codewave.163.com/upload/app/afaec238-82f5-4996-8fdd-0aae42f393de/女警出更第二季_1786536326_afaec238-82f5-4996-8fdd-0aae42f393de_efp4FRM8_20260812200527961.webp" alt="《女警出更第二季》高清海报" loading="lazy" decoding="async" />
+	<span class="play hidden-xs"></span>										
+	
+	<span class="note textbg">更新至第07集</span>							
+</a>
+
+<div class="title">
+
+	<h3 class="text-overflow"><a href="/movie/index424202.html" title="女警出更第二季">女警出更第二季</a></h3>
+
+</div>
+
+<div class="subtitle text-muted text-overflow hidden-xs">
+
+	芭芭拉·默瑞,西梅娜·沙琳安娜,纳塔利娅·特列斯,阿莫莉塔·拉斯加多
+
+</div>
+							    				    						
+								</div>
+								
+							    <div class="col-md-2 col-sm-3 col-xs-4 ">						    	
+						    		<a class="videopic" href="/movie/index414157.html" title="风，带有香气" style="background: url(/templets/wapian/images/load.gif) no-repeat; background-position:50% 50%; background-size: cover;" >								
+	<img class="lazy" src="/templets/wapian/images/load.gif" data-original="https://community.codewave.163.com:443/upload/app/afaec238-82f5-4996-8fdd-0aae42f393de/风带有香气_1782542467_afaec238-82f5-4996-8fdd-0aae42f393de_efp5BYL1_20260627144107993.jpg" alt="《风，带有香气》高清海报" loading="lazy" decoding="async" />
+	<span class="play hidden-xs"></span>										
+	
+	<span class="note textbg">更新至第128集</span>							
+</a>
+
+<div class="title">
+
+	<h3 class="text-overflow"><a href="/movie/index414157.html" title="风，带有香气">风，带有香气</a></h3>
+
+</div>
+
+<div class="subtitle text-muted text-overflow hidden-xs">
+
+	见上爱,上坂树里,水野美纪,早坂美海,小林隆,小林虎之介,津崎史郎,岩瀬顕子,三浦贵大,根岸季衣,大岛美幸,义达祐未,たくや,原田泰造,北村一辉,佐野晶哉,藤原季节,林裕太,坂东弥十郎,内田慈,小倉史也,片冈鹤太郎,松金米子,广冈由里子,春海四方,多部未华子,高岛政宏,二田絢乃,中田青渚,井上向日葵,丸山礼,研直子,生田绘梨花,菊池亚希子,中井友望,木越明,原嶋凛,玄理,伊势志摩,古川雄大,坂口涼
+
+</div>
+							    				    						
+								</div>
+								
+							    <div class="col-md-2 col-sm-3 col-xs-4 ">						    	
+						    		<a class="videopic" href="/movie/index428427.html" title="最后目击" style="background: url(/templets/wapian/images/load.gif) no-repeat; background-position:50% 50%; background-size: cover;" >								
+	<img class="lazy" src="/templets/wapian/images/load.gif" data-original="https://community.codewave.163.com/upload/app/afaec238-82f5-4996-8fdd-0aae42f393de/最后目击_1788942076_afaec238-82f5-4996-8fdd-0aae42f393de_efp4KQV8_20260909162117977.webp" alt="《最后目击》高清海报" loading="lazy" decoding="async" />
+	<span class="play hidden-xs"></span>										
+	
+	<span class="note textbg">更新至第04集</span>							
+</a>
+
+<div class="title">
+
+	<h3 class="text-overflow"><a href="/movie/index428427.html" title="最后目击">最后目击</a></h3>
+
+</div>
+
+<div class="subtitle text-muted text-overflow hidden-xs">
+
+	帕特里克·布拉莫尔,玛克辛·皮克,丹尼尔·亨绍尔,布伦丹·考威尔,费利克斯·卡梅伦,扎赫拉·纽曼,康纳·麦克劳德,波特·拉邦特,弗莱彻·汉弗莱斯,James Saunders,Carolyn Bock,Zane Blumeris,Hasini Walpola,泰勒·弗格森,Taylor Grant
+
+</div>
+							    				    						
+								</div>
+								
+							    <div class="col-md-2 col-sm-3 col-xs-4 ">						    	
+						    		<a class="videopic" href="/movie/index414099.html" title="豆腐妈妈" style="background: url(/templets/wapian/images/load.gif) no-repeat; background-position:50% 50%; background-size: cover;" >								
+	<img class="lazy" src="/templets/wapian/images/load.gif" data-original="https://community.codewave.163.com:443/upload/app/afaec238-82f5-4996-8fdd-0aae42f393de/豆腐妈妈_1782542447_afaec238-82f5-4996-8fdd-0aae42f393de_efp1ZAX0_20260627144048062.jpg" alt="《豆腐妈妈》高清海报" loading="lazy" decoding="async" />
+	<span class="play hidden-xs"></span>										
+	
+	<span class="note textbg">更新至第195集</span>							
+</a>
+
+<div class="title">
+
+	<h3 class="text-overflow"><a href="/movie/index414099.html" title="豆腐妈妈">豆腐妈妈</a></h3>
+
+</div>
+
+<div class="subtitle text-muted text-overflow hidden-xs">
+
+	谢琼煖,洪都拉斯,陈仙梅,蓝苇华,苏晏霈,曾智希,曾子益,陈志强,郭忠祐,李之勤,潘奕如,范瑞君,王耿豪,吴铃山,张倩,李运庆,罗子惟,宫美乐,王晴,于浩威,马国毕,张世贤,徐千京,黄子玲,黄靖雅,李佩怡,吴政澔,黄尚禾,吴皓升
+
+</div>
+							    				    						
+								</div>
+								
+							    <div class="col-md-2 col-sm-3 col-xs-4 visible-sm">						    	
+						    		<a class="videopic" href="/movie/index429228.html" title="云雀叫天录" style="background: url(/templets/wapian/images/load.gif) no-repeat; background-position:50% 50%; background-size: cover;" >								
+	<img class="lazy" src="/templets/wapian/images/load.gif" data-original="https://community.codewave.163.com/upload/app/afaec238-82f5-4996-8fdd-0aae42f393de/云雀叫天录_1789359084_afaec238-82f5-4996-8fdd-0aae42f393de_efp5PTK4_20260914121126450.webp" alt="《云雀叫天录》高清海报" loading="lazy" decoding="async" />
+	<span class="play hidden-xs"></span>										
+	
+	<span class="note textbg">更新至第22集</span>							
+</a>
+
+<div class="title">
+
+	<h3 class="text-overflow"><a href="/movie/index429228.html" title="云雀叫天录">云雀叫天录</a></h3>
+
+</div>
+
+<div class="subtitle text-muted text-overflow hidden-xs">
+
+	张一山,谭卓,曹磊,杨立新,刘威,于慧,赵亮,六小龄童,杨新鸣,何中华,谭正岩,邢岷山,周九良,张炜迅,张树晨,杨名,杜奕衡,高阳,魏楷峰,刚毅,刘立伟,张喜前,杜玉明
+
+</div>
+							    				    						
+								</div>
+								
+							    <div class="col-md-2 col-sm-3 col-xs-4 visible-sm">						    	
+						    		<a class="videopic" href="/movie/index428791.html" title="南诏王" style="background: url(/templets/wapian/images/load.gif) no-repeat; background-position:50% 50%; background-size: cover;" >								
+	<img class="lazy" src="/templets/wapian/images/load.gif" data-original="https://community.codewave.163.com/upload/app/afaec238-82f5-4996-8fdd-0aae42f393de/南诏王_1789129273_afaec238-82f5-4996-8fdd-0aae42f393de_efp2AST8_20260911202115463.webp" alt="《南诏王》高清海报" loading="lazy" decoding="async" />
+	<span class="play hidden-xs"></span>										
+	
+	<span class="note textbg">更新至第30集</span>							
+</a>
+
+<div class="title">
+
+	<h3 class="text-overflow"><a href="/movie/index428791.html" title="南诏王">南诏王</a></h3>
+
+</div>
+
+<div class="subtitle text-muted text-overflow hidden-xs">
+
+	程韦然,龚海铭,吴茉彤,闫露娢,铭罡,石羽嫣,耿懿,穆怀虎,杨涵斌,李迎旗,曲木古火·秋风,张鸿斌,巴宁,石一石达,李金泽,马嘿·阿依诗莎,徐媛媛,拉仁,朱婷,刘一阳,单阳光,杜美莹,田天,王彦江,李海山,陈海江,巴莫布哈,格萨,郭长健,马达,杨玉龙,施果达,张玉军,李世荣,阿布,简晓耀,陈祖宇,张艳,先金梅,张敏,小宝,张小军,王世文,沙子博,张琪曼,马晨予,杨亿,杨惠,沙子融
+
+</div>
+							    				    						
+								</div>
+									
+							</div>
+						</div>					
+						<div class="hy-video-text-list hidden-xs clearfix">
+							<div class="item">
+								<ul class="clearfix">
+									
+									<li>	
+										<div class="title text-overflow">
+	<a href="/movie/index428426.html" title="毒潮：白粉飞纪事">
+		<span class="pull-right"><i class="icon iconfont icon-right text-muted"></i></span>
+		毒潮：白粉飞纪事
+	</a>		
+</div>																									
+																										
+									</li>
+									
+									<li>	
+										<div class="title text-overflow">
+	<a href="/movie/index424202.html" title="女警出更第二季">
+		<span class="pull-right"><i class="icon iconfont icon-right text-muted"></i></span>
+		女警出更第二季
+	</a>		
+</div>																									
+																										
+									</li>
+									
+									<li>	
+										<div class="title text-overflow">
+	<a href="/movie/index414157.html" title="风，带有香气">
+		<span class="pull-right"><i class="icon iconfont icon-right text-muted"></i></span>
+		风，带有香气
+	</a>		
+</div>																									
+																										
+									</li>
+									
+									<li>	
+										<div class="title text-overflow">
+	<a href="/movie/index422174.html" title="心动的信号第九季">
+		<span class="pull-right"><i class="icon iconfont icon-right text-muted"></i></span>
+		心动的信号第九季
+	</a>		
+</div>																									
+																										
+									</li>
+									
+									<li>	
+										<div class="title text-overflow">
+	<a href="/movie/index413477.html" title="爱情保卫战">
+		<span class="pull-right"><i class="icon iconfont icon-right text-muted"></i></span>
+		爱情保卫战
+	</a>		
+</div>																									
+																										
+									</li>
+									
+									<li>	
+										<div class="title text-overflow">
+	<a href="/movie/index338436.html" title="全民星攻略">
+		<span class="pull-right"><i class="icon iconfont icon-right text-muted"></i></span>
+		全民星攻略
+	</a>		
+</div>																									
+																										
+									</li>
+									
+									<li>	
+										<div class="title text-overflow">
+	<a href="/movie/index338409.html" title="食尚玩家">
+		<span class="pull-right"><i class="icon iconfont icon-right text-muted"></i></span>
+		食尚玩家
+	</a>		
+</div>																									
+																										
+									</li>
+									
+									<li>	
+										<div class="title text-overflow">
+	<a href="/movie/index420768.html" title="一饭封神2">
+		<span class="pull-right"><i class="icon iconfont icon-right text-muted"></i></span>
+		一饭封神2
+	</a>		
+</div>																									
+																										
+									</li>
+									
+									<li>	
+										<div class="title text-overflow">
+	<a href="/movie/index413464.html" title="跟着书本去旅行">
+		<span class="pull-right"><i class="icon iconfont icon-right text-muted"></i></span>
+		跟着书本去旅行
+	</a>		
+</div>																									
+																										
+									</li>
+									
+									<li>	
+										<div class="title text-overflow">
+	<a href="/movie/index429666.html" title="配送来了-What Song Express">
+		<span class="pull-right"><i class="icon iconfont icon-right text-muted"></i></span>
+		配送来了-What..
+	</a>		
+</div>																									
+																										
+									</li>
+									
+									<li>	
+										<div class="title text-overflow">
+	<a href="/movie/index415903.html" title="食神·百厨大战">
+		<span class="pull-right"><i class="icon iconfont icon-right text-muted"></i></span>
+		食神·百厨大战
+	</a>		
+</div>																									
+																										
+									</li>
+									
+									<li>	
+										<div class="title text-overflow">
+	<a href="/movie/index338418.html" title="医学大联盟">
+		<span class="pull-right"><i class="icon iconfont icon-right text-muted"></i></span>
+		医学大联盟
+	</a>		
+</div>																									
+																										
+									</li>
+											
+								</ul>
+							</div>							
+						</div>
+					</div>				
+					<div class="hy-video-footer visible-xs clearfix">
+						<a href="/latest.php" class="text-muted" title="查看更多">查看更多 <i class="icon iconfont icon-right pull-right"></i></a>
+					</div>		    																									
+				</div>
+				<!--end 最近更新-->
+                
+			    <!--电影/电视剧 -->
+				
+				<div class="hy-layout clearfix">						
+					<div class="hy-video-head">
+						<ul class="pull-right">
+							
+							<li class="text-muted hidden-md hidden-sm hidden-xs"><a href="search.php?searchtype=5&tid=5" class="text-muted border-right">动作片</a> /</li>
+							
+							<li class="text-muted hidden-md hidden-sm hidden-xs"><a href="search.php?searchtype=5&tid=7" class="text-muted border-right">科幻片</a> /</li>
+							
+							<li class="text-muted hidden-md hidden-sm hidden-xs"><a href="search.php?searchtype=5&tid=8" class="text-muted border-right">恐怖片</a> /</li>
+							
+							<li class="text-muted hidden-md hidden-sm hidden-xs"><a href="search.php?searchtype=5&tid=9" class="text-muted border-right">战争片</a> /</li>
+							
+							<li class="text-muted hidden-md hidden-sm hidden-xs"><a href="search.php?searchtype=5&tid=10" class="text-muted border-right">喜剧片</a> /</li>
+							
+							<li class="text-muted hidden-md hidden-sm hidden-xs"><a href="search.php?searchtype=5&tid=41" class="text-muted border-right">动画片</a> /</li>
+							
+							<li class="text-muted hidden-md hidden-sm hidden-xs"><a href="search.php?searchtype=5&tid=12" class="text-muted border-right">剧情片</a> /</li>
+							
+							<li class="text-muted hidden-md hidden-sm hidden-xs"><a href="search.php?searchtype=5&tid=6" class="text-muted border-right">爱情片</a> /</li>
+							
+							<li class="text-muted hidden-md hidden-sm hidden-xs"><a href="search.php?searchtype=5&tid=11" class="text-muted border-right">纪录片</a> /</li>
+							
+							<li class="active"><a href="/search.php?searchtype=5&order=monthhit&tid=1" class="text-muted" title="查看更多">更多 <i class="icon iconfont icon-right"></i></a></li>
+						</ul>
+						<h2 class="margin-0"><i class="icon iconfont icon-film text-color"></i> 热门电影</h2>						
+					</div>
+					<div class="clearfix">
+						<div class="hy-video-list clearfix">
+						    <div class="item">																			
+								
+							    <div class="col-md-2 col-sm-3 col-xs-4 ">						    	
+						    		<a class="videopic" href="/movie/index420715.html" title="八仙！" style="background: url(/templets/wapian/images/load.gif) no-repeat; background-position:50% 50%; background-size: cover;" >								
+	<img class="lazy" src="/templets/wapian/images/load.gif" data-original="https://community.codewave.163.com/upload/app/afaec238-82f5-4996-8fdd-0aae42f393de/八仙_1784784161_afaec238-82f5-4996-8fdd-0aae42f393de_efp7TAE5_20260723132242900.webp" alt="《八仙！》高清海报" loading="lazy" decoding="async" />
+	<span class="play hidden-xs"></span>										
+	<span class="score">8.2</span>
+	<span class="note textbg">HD国语</span>							
+</a>
+
+<div class="title">
+
+	<h3 class="text-overflow"><a href="/movie/index420715.html" title="八仙！">八仙！</a></h3>
+
+</div>
+
+<div class="subtitle text-muted text-overflow hidden-xs">
+
+	陈浩,李绍哲,立冬,果子哥哥,董天弋,喻鹏力,黄豫硕,张运气,邓先森,曹知善,囧森瑟夫,零柒,韩雨泽,张天宇,张稷,良生
+
+</div>
+							    				    						
+								</div>
+								
+							    <div class="col-md-2 col-sm-3 col-xs-4 ">						    	
+						    		<a class="videopic" href="/movie/index426186.html" title="夜王" style="background: url(/templets/wapian/images/load.gif) no-repeat; background-position:50% 50%; background-size: cover;" >								
+	<img class="lazy" src="/templets/wapian/images/load.gif" data-original="https://community.codewave.163.com/upload/app/afaec238-82f5-4996-8fdd-0aae42f393de/夜王_1787599236_afaec238-82f5-4996-8fdd-0aae42f393de_efp1JDV9_20260825032038396.webp" alt="《夜王》高清海报" loading="lazy" decoding="async" />
+	<span class="play hidden-xs"></span>										
+	<span class="score">7.8</span>
+	<span class="note textbg">HD导演版</span>							
+</a>
+
+<div class="title">
+
+	<h3 class="text-overflow"><a href="/movie/index426186.html" title="夜王">夜王</a></h3>
+
+</div>
+
+<div class="subtitle text-muted text-overflow hidden-xs">
+
+	黄子华,郑秀文,王丹妮,廖子妤,杨伟伦,谢君豪,卢镇业,何启华,杨偲泳,谭旻萱,李芯駖,林熙彤,邓丽英,蔡蕙琪,黄洁琪,赵君瑜,王紫影,黎纪君,董玮,甄懋强,许素莹,张可坚,徐浩昌,陈献略,邱颂伟,苏民峰,麦子云,廖颖琛
+
+</div>
+							    				    						
+								</div>
+								
+							    <div class="col-md-2 col-sm-3 col-xs-4 ">						    	
+						    		<a class="videopic" href="/movie/index420307.html" title="奥德赛" style="background: url(/templets/wapian/images/load.gif) no-repeat; background-position:50% 50%; background-size: cover;" >								
+	<img class="lazy" src="/templets/wapian/images/load.gif" data-original="https://community.codewave.163.com/upload/app/afaec238-82f5-4996-8fdd-0aae42f393de/奥德赛_1784542945_afaec238-82f5-4996-8fdd-0aae42f393de_efp5TQF1_20260720182226853.webp" alt="《奥德赛》高清海报" loading="lazy" decoding="async" />
+	<span class="play hidden-xs"></span>										
+	<span class="score">8.6</span>
+	<span class="note textbg">HDTC中字</span>							
+</a>
+
+<div class="title">
+
+	<h3 class="text-overflow"><a href="/movie/index420307.html" title="奥德赛">奥德赛</a></h3>
+
+</div>
+
+<div class="subtitle text-muted text-overflow hidden-xs">
+
+	马特·达蒙,汤姆·霍兰德,安妮·海瑟薇,罗伯特·帕丁森,查理兹·塞隆,赞达亚,米娅·高斯,露皮塔·尼永奥,艾利奥特·佩吉,乔·博恩瑟,本·萨弗迪,萨曼莎·莫顿,约翰·雷吉扎莫,比尔·欧文,希米什·帕特尔,李威尹,科里·霍金斯,尼克·塔拉贝,吉米·冈萨雷斯,杰西·加西亚,柯斯莫·贾维斯,瑞恩·赫斯特,特拉维斯·斯科特
+
+</div>
+							    				    						
+								</div>
+								
+							    <div class="col-md-2 col-sm-3 col-xs-4 ">						    	
+						    		<a class="videopic" href="/movie/index427220.html" title="给阿嬷的情书" style="background: url(/templets/wapian/images/load.gif) no-repeat; background-position:50% 50%; background-size: cover;" >								
+	<img class="lazy" src="/templets/wapian/images/load.gif" data-original="https://community.codewave.163.com/upload/app/afaec238-82f5-4996-8fdd-0aae42f393de/给阿嬷的情书_1788138940_afaec238-82f5-4996-8fdd-0aae42f393de_efp6HUJ4_20260831091541605.webp" alt="《给阿嬷的情书》高清海报" loading="lazy" decoding="async" />
+	<span class="play hidden-xs"></span>										
+	<span class="score">9.3</span>
+	<span class="note textbg">更新至HD</span>							
+</a>
+
+<div class="title">
+
+	<h3 class="text-overflow"><a href="/movie/index427220.html" title="给阿嬷的情书">给阿嬷的情书</a></h3>
+
+</div>
+
+<div class="subtitle text-muted text-overflow hidden-xs">
+
+	李思潼,王彦桐,吴少卿,郑润奇,王晓慧,赵曙光,李德如,李树浩,乌萨·萨梅坎姆,方培松,钟少贤,郑鹏生,麦乐瑟,徐培涌
+
+</div>
+							    				    						
+								</div>
+								
+							    <div class="col-md-2 col-sm-3 col-xs-4 ">						    	
+						    		<a class="videopic" href="/movie/index422175.html" title="蜘蛛侠：崭新之日" style="background: url(/templets/wapian/images/load.gif) no-repeat; background-position:50% 50%; background-size: cover;" >								
+	<img class="lazy" src="/templets/wapian/images/load.gif" data-original="https://community.codewave.163.com/upload/app/afaec238-82f5-4996-8fdd-0aae42f393de/蜘蛛侠崭新之日_1785507624_afaec238-82f5-4996-8fdd-0aae42f393de_efp3HVP5_20260731222025394.webp" alt="《蜘蛛侠：崭新之日》高清海报" loading="lazy" decoding="async" />
+	<span class="play hidden-xs"></span>										
+	<span class="score">7.8</span>
+	<span class="note textbg">HDTC中字</span>							
+</a>
+
+<div class="title">
+
+	<h3 class="text-overflow"><a href="/movie/index422175.html" title="蜘蛛侠：崭新之日">蜘蛛侠：崭新之日</a></h3>
+
+</div>
+
+<div class="subtitle text-muted text-overflow hidden-xs">
+
+	汤姆·霍兰德,赞达亚,萨迪·辛克,乔·博恩瑟,雅各布·贝塔隆,马克·鲁法洛,弗洛伦丝·皮尤,莉莎·科伦-扎亚斯,特拉梅尔·提尔曼,玛丽莎·托梅,迈克尔·曼多,娜奥米·沃茨,凯斯·大卫,马文·琼斯三世,奥利维亚·布斯-福特,艾曼·埃斯凡迪
+
+</div>
+							    				    						
+								</div>
+								
+							    <div class="col-md-2 col-sm-3 col-xs-4 ">						    	
+						    		<a class="videopic" href="/movie/index419066.html" title="功夫女足" style="background: url(/templets/wapian/images/load.gif) no-repeat; background-position:50% 50%; background-size: cover;" >								
+	<img class="lazy" src="/templets/wapian/images/load.gif" data-original="https://community.codewave.163.com/upload/app/afaec238-82f5-4996-8fdd-0aae42f393de/功夫女足_1783843350_afaec238-82f5-4996-8fdd-0aae42f393de_efp5HVT7_20260712160231264.webp" alt="《功夫女足》高清海报" loading="lazy" decoding="async" />
+	<span class="play hidden-xs"></span>										
+	<span class="score">6.3</span>
+	<span class="note textbg">TC国语</span>							
+</a>
+
+<div class="title">
+
+	<h3 class="text-overflow"><a href="/movie/index419066.html" title="功夫女足">功夫女足</a></h3>
+
+</div>
+
+<div class="subtitle text-muted text-overflow hidden-xs">
+
+	张小斐,迪丽热巴,张艺兴,刘嘉玲,佐藤健,艾米,雪野,蔡思贝,胡予安,倪好,赵丽娜,欧阳靖,张继聪,欧阳万成,陈旻,李卓媚,秦鹏飞,张天一,孙子七,洪蕾,施予斐,景如洋,李奕臻,赖迦童,葛依萱,王奕彤,马睎悦,邹霞,崔桐侥,张娣,张琪,房岩,邓月平,查恩雅·麦克洛里,许君聪,门腔,冯勉恒,唐香玉,李明远,苗溢伦,鄂靖文,AVANTGARDEY,张美娥,那迪,冯禧
+
+</div>
+							    				    						
+								</div>
+								
+							    <div class="col-md-2 col-sm-3 col-xs-4 visible-sm">						    	
+						    		<a class="videopic" href="/movie/index427733.html" title="特立独行" style="background: url(/templets/wapian/images/load.gif) no-repeat; background-position:50% 50%; background-size: cover;" >								
+	<img class="lazy" src="/templets/wapian/images/load.gif" data-original="https://community.codewave.163.com/upload/app/afaec238-82f5-4996-8fdd-0aae42f393de/特立独行_1788505251_afaec238-82f5-4996-8fdd-0aae42f393de_efp3GEM5_20260904150053156.webp" alt="《特立独行》高清海报" loading="lazy" decoding="async" />
+	<span class="play hidden-xs"></span>										
+	<span class="score">6.7</span>
+	<span class="note textbg">HD国语</span>							
+</a>
+
+<div class="title">
+
+	<h3 class="text-overflow"><a href="/movie/index427733.html" title="特立独行">特立独行</a></h3>
+
+</div>
+
+<div class="subtitle text-muted text-overflow hidden-xs">
+
+	白敬亭,魏翔,张国强,赵海燕,苏小玎,于洋,黄才伦,丁勇岱,王智,刘流,徐志胜,马旭东,蒋诗萌,宋木子,宋家腾,孙立荣,张祐维,蒋易,张小婉,合文俊,周铁男,李飞,郭耘奇,何广智,刘雪涛,金天宇,刘乙蒙
+
+</div>
+							    				    						
+								</div>
+								
+							    <div class="col-md-2 col-sm-3 col-xs-4 visible-sm">						    	
+						    		<a class="videopic" href="/movie/index424895.html" title="欢迎来龙餐馆" style="background: url(/templets/wapian/images/load.gif) no-repeat; background-position:50% 50%; background-size: cover;" >								
+	<img class="lazy" src="/templets/wapian/images/load.gif" data-original="https://community.codewave.163.com/upload/app/afaec238-82f5-4996-8fdd-0aae42f393de/欢迎来龙餐馆_1786951832_afaec238-82f5-4996-8fdd-0aae42f393de_efp3IBR6_20260817153033905.webp" alt="《欢迎来龙餐馆》高清海报" loading="lazy" decoding="async" />
+	<span class="play hidden-xs"></span>										
+	<span class="score">8.7</span>
+	<span class="note textbg">更新至HD</span>							
+</a>
+
+<div class="title">
+
+	<h3 class="text-overflow"><a href="/movie/index424895.html" title="欢迎来龙餐馆">欢迎来龙餐馆</a></h3>
+
+</div>
+
+<div class="subtitle text-muted text-overflow hidden-xs">
+
+	沈腾,蒋奇明,奥马尔·谢里夫,李治廷,谢里夫·萨比,艾哈迈德·塞利姆,法鲁克·穆罕穆德,拉塞尔·希利,奈拉·阿克西姆,卡尔玛·哈齐姆,苇青,张熙唯
+
+</div>
+							    				    						
+								</div>
+									
+							</div>
+						</div>					
+						<div class="hy-video-text-list hidden-xs clearfix">
+							<div class="item">
+								<ul class="clearfix">
+									
+									<li>	
+										<div class="title text-overflow">
+	<a href="/movie/index427733.html" title="特立独行">
+		<span class="pull-right"><i class="icon iconfont icon-right text-muted"></i></span>
+		特立独行
+	</a>		
+</div>																									
+																										
+									</li>
+									
+									<li>	
+										<div class="title text-overflow">
+	<a href="/movie/index424895.html" title="欢迎来龙餐馆">
+		<span class="pull-right"><i class="icon iconfont icon-right text-muted"></i></span>
+		欢迎来龙餐馆
+	</a>		
+</div>																									
+																										
+									</li>
+									
+									<li>	
+										<div class="title text-overflow">
+	<a href="/movie/index427729.html" title="求救信号">
+		<span class="pull-right"><i class="icon iconfont icon-right text-muted"></i></span>
+		求救信号
+	</a>		
+</div>																									
+																										
+									</li>
+									
+									<li>	
+										<div class="title text-overflow">
+	<a href="/movie/index422179.html" title="四渡">
+		<span class="pull-right"><i class="icon iconfont icon-right text-muted"></i></span>
+		四渡
+	</a>		
+</div>																									
+																										
+									</li>
+									
+									<li>	
+										<div class="title text-overflow">
+	<a href="/movie/index424701.html" title="年会不能停！2">
+		<span class="pull-right"><i class="icon iconfont icon-right text-muted"></i></span>
+		年会不能停！2
+	</a>		
+</div>																									
+																										
+									</li>
+									
+									<li>	
+										<div class="title text-overflow">
+	<a href="/movie/index414048.html" title="洛杉矶劫案">
+		<span class="pull-right"><i class="icon iconfont icon-right text-muted"></i></span>
+		洛杉矶劫案
+	</a>		
+</div>																									
+																										
+									</li>
+									
+									<li>	
+										<div class="title text-overflow">
+	<a href="/movie/index415929.html" title="火遮眼">
+		<span class="pull-right"><i class="icon iconfont icon-right text-muted"></i></span>
+		火遮眼
+	</a>		
+</div>																									
+																										
+									</li>
+									
+									<li>	
+										<div class="title text-overflow">
+	<a href="/movie/index427537.html" title="我要你的性">
+		<span class="pull-right"><i class="icon iconfont icon-right text-muted"></i></span>
+		我要你的性
+	</a>		
+</div>																									
+																										
+									</li>
+									
+									<li>	
+										<div class="title text-overflow">
+	<a href="/movie/index415012.html" title="星球大战：曼达洛人与古古">
+		<span class="pull-right"><i class="icon iconfont icon-right text-muted"></i></span>
+		星球大战：曼达洛人..
+	</a>		
+</div>																									
+																										
+									</li>
+									
+									<li>	
+										<div class="title text-overflow">
+	<a href="/movie/index428431.html" title="海洋奇缘：启航">
+		<span class="pull-right"><i class="icon iconfont icon-right text-muted"></i></span>
+		海洋奇缘：启航
+	</a>		
+</div>																									
+																										
+									</li>
+									
+									<li>	
+										<div class="title text-overflow">
+	<a href="/movie/index414834.html" title="寒战1994">
+		<span class="pull-right"><i class="icon iconfont icon-right text-muted"></i></span>
+		寒战1994
+	</a>		
+</div>																									
+																										
+									</li>
+									
+									<li>	
+										<div class="title text-overflow">
+	<a href="/movie/index414624.html" title="挽救计划">
+		<span class="pull-right"><i class="icon iconfont icon-right text-muted"></i></span>
+		挽救计划
+	</a>		
+</div>																									
+																										
+									</li>
+											
+								</ul>
+							</div>							
+						</div>
+					</div>				
+					<div class="hy-video-footer visible-xs clearfix">
+						<a href="/search.php?searchtype=5&order=monthhit&tid=1" class="text-muted" title="查看更多">查看更多 <i class="icon iconfont icon-right pull-right"></i></a>
+					</div>		    																									
+				</div>
+				
+				<div class="hy-layout clearfix">						
+					<div class="hy-video-head">
+						<ul class="pull-right">
+							
+							<li class="text-muted hidden-md hidden-sm hidden-xs"><a href="search.php?searchtype=5&tid=13" class="text-muted border-right">国产剧</a> /</li>
+							
+							<li class="text-muted hidden-md hidden-sm hidden-xs"><a href="search.php?searchtype=5&tid=14" class="text-muted border-right">港台剧</a> /</li>
+							
+							<li class="text-muted hidden-md hidden-sm hidden-xs"><a href="search.php?searchtype=5&tid=15" class="text-muted border-right">欧美剧</a> /</li>
+							
+							<li class="text-muted hidden-md hidden-sm hidden-xs"><a href="search.php?searchtype=5&tid=16" class="text-muted border-right">日韩剧</a> /</li>
+							
+							<li class="text-muted hidden-md hidden-sm hidden-xs"><a href="search.php?searchtype=5&tid=42" class="text-muted border-right">海外剧</a> /</li>
+							
+							<li class="active"><a href="/search.php?searchtype=5&order=monthhit&tid=2" class="text-muted" title="查看更多">更多 <i class="icon iconfont icon-right"></i></a></li>
+						</ul>
+						<h2 class="margin-0"><i class="icon iconfont icon-show text-color"></i> 热门电视剧</h2>						
+					</div>
+					<div class="clearfix">
+						<div class="hy-video-list clearfix">
+						    <div class="item">																			
+								
+							    <div class="col-md-2 col-sm-3 col-xs-4 ">						    	
+						    		<a class="videopic" href="/movie/index427901.html" title="交锋" style="background: url(/templets/wapian/images/load.gif) no-repeat; background-position:50% 50%; background-size: cover;" >								
+	<img class="lazy" src="/templets/wapian/images/load.gif" data-original="https://community.codewave.163.com/upload/app/afaec238-82f5-4996-8fdd-0aae42f393de/交锋_1788694873_afaec238-82f5-4996-8fdd-0aae42f393de_efp3GGE5_20260906194116382.webp" alt="《交锋》高清海报" loading="lazy" decoding="async" />
+	<span class="play hidden-xs"></span>										
+	<span class="score">7.5</span>
+	<span class="note textbg">已完结</span>							
+</a>
+
+<div class="title">
+
+	<h3 class="text-overflow"><a href="/movie/index427901.html" title="交锋">交锋</a></h3>
+
+</div>
+
+<div class="subtitle text-muted text-overflow hidden-xs">
+
+	王凯,周依然,欧豪,彭昱畅,成泰燊,齐欢,邱天,吴启华,吴越,岳旸,高鑫,高捷,祖峰,董勇
+
+</div>
+							    				    						
+								</div>
+								
+							    <div class="col-md-2 col-sm-3 col-xs-4 ">						    	
+						    		<a class="videopic" href="/movie/index426387.html" title="早春晴朗" style="background: url(/templets/wapian/images/load.gif) no-repeat; background-position:50% 50%; background-size: cover;" >								
+	<img class="lazy" src="/templets/wapian/images/load.gif" data-original="https://community.codewave.163.com/upload/app/afaec238-82f5-4996-8fdd-0aae42f393de/早春晴朗_1787718040_afaec238-82f5-4996-8fdd-0aae42f393de_efp7ISP9_20260826122041506.webp" alt="《早春晴朗》高清海报" loading="lazy" decoding="async" />
+	<span class="play hidden-xs"></span>										
+	<span class="score">6.7</span>
+	<span class="note textbg">完结</span>							
+</a>
+
+<div class="title">
+
+	<h3 class="text-overflow"><a href="/movie/index426387.html" title="早春晴朗">早春晴朗</a></h3>
+
+</div>
+
+<div class="subtitle text-muted text-overflow hidden-xs">
+
+	井柏然,孙千,刘小北,齐天晴,张晔子,宁心,赵振宇,张优,彭杨,郭晓婷,李川
+
+</div>
+							    				    						
+								</div>
+								
+							    <div class="col-md-2 col-sm-3 col-xs-4 ">						    	
+						    		<a class="videopic" href="/movie/index428790.html" title="兰香如故" style="background: url(/templets/wapian/images/load.gif) no-repeat; background-position:50% 50%; background-size: cover;" >								
+	<img class="lazy" src="/templets/wapian/images/load.gif" data-original="https://community.codewave.163.com/upload/app/afaec238-82f5-4996-8fdd-0aae42f393de/兰香如故_1789129273_afaec238-82f5-4996-8fdd-0aae42f393de_efp2TLA8_20260911202116210.webp" alt="《兰香如故》高清海报" loading="lazy" decoding="async" />
+	<span class="play hidden-xs"></span>										
+	
+	<span class="note textbg">更新至第26集</span>							
+</a>
+
+<div class="title">
+
+	<h3 class="text-overflow"><a href="/movie/index428790.html" title="兰香如故">兰香如故</a></h3>
+
+</div>
+
+<div class="subtitle text-muted text-overflow hidden-xs">
+
+	谭松韵,刘学义,李梦,郑合惠子,郭柯宇,吴甜甜,叶青,蒲萄,宋芳园,李嘉鑫,刘佳玺,牛骏峰,苏可,侯长荣,陈创,孔令美,魏子昕,吴晓东,严晓频,章申,刘美含,贺鹏,嘉泽,郭迦南,汤梦佳,马凡丁,关畅,赵秦,李泓良,吴天琪,柯蓝,董晴,沈泰,孔连顺,张铎,邬家楷,叶筱玮,马闻远,辛鹏,姚一奇,赵梓冲,辛浩江,王佳璇,王玉宁,孙仲秋,郑卫莉,王艺禅,王亚军,周知,奚望
+
+</div>
+							    				    						
+								</div>
+								
+							    <div class="col-md-2 col-sm-3 col-xs-4 ">						    	
+						    		<a class="videopic" href="/movie/index428489.html" title="冬城猎凶" style="background: url(/templets/wapian/images/load.gif) no-repeat; background-position:50% 50%; background-size: cover;" >								
+	<img class="lazy" src="/templets/wapian/images/load.gif" data-original="https://community.codewave.163.com/upload/app/afaec238-82f5-4996-8fdd-0aae42f393de/冬城猎凶_1789014058_afaec238-82f5-4996-8fdd-0aae42f393de_efp8NNO1_20260910122100454.webp" alt="《冬城猎凶》高清海报" loading="lazy" decoding="async" />
+	<span class="play hidden-xs"></span>										
+	
+	<span class="note textbg">完结</span>							
+</a>
+
+<div class="title">
+
+	<h3 class="text-overflow"><a href="/movie/index428489.html" title="冬城猎凶">冬城猎凶</a></h3>
+
+</div>
+
+<div class="subtitle text-muted text-overflow hidden-xs">
+
+	王阳,万茜,余文乐,尹文萱 ,李纯,周逵,赵阳,赵龙豪,谭耀文,李梦男,李培铭,张澍,张琛,太保
+
+</div>
+							    				    						
+								</div>
+								
+							    <div class="col-md-2 col-sm-3 col-xs-4 ">						    	
+						    		<a class="videopic" href="/movie/index426506.html" title="醒来2026" style="background: url(/templets/wapian/images/load.gif) no-repeat; background-position:50% 50%; background-size: cover;" >								
+	<img class="lazy" src="/templets/wapian/images/load.gif" data-original="https://community.codewave.163.com/upload/app/afaec238-82f5-4996-8fdd-0aae42f393de/醒来2026_1787744440_afaec238-82f5-4996-8fdd-0aae42f393de_efp6GUX6_20260826194042849.webp" alt="《醒来2026》高清海报" loading="lazy" decoding="async" />
+	<span class="play hidden-xs"></span>										
+	<span class="score">6.8</span>
+	<span class="note textbg">已完结</span>							
+</a>
+
+<div class="title">
+
+	<h3 class="text-overflow"><a href="/movie/index426506.html" title="醒来2026">醒来2026</a></h3>
+
+</div>
+
+<div class="subtitle text-muted text-overflow hidden-xs">
+
+	欧豪,古力娜扎,冯绍峰,江疏影,梁洁,黄觉,黄尧,许芳铱,张铎,徐梵溪,倪寒尽,王子权,马渝捷,赫子铭,王策,王江一
+
+</div>
+							    				    						
+								</div>
+								
+							    <div class="col-md-2 col-sm-3 col-xs-4 ">						    	
+						    		<a class="videopic" href="/movie/index427226.html" title="重案六组：消失的警号" style="background: url(/templets/wapian/images/load.gif) no-repeat; background-position:50% 50%; background-size: cover;" >								
+	<img class="lazy" src="/templets/wapian/images/load.gif" data-original="https://community.codewave.163.com/upload/app/afaec238-82f5-4996-8fdd-0aae42f393de/重案六组消失的警号_1788147939_afaec238-82f5-4996-8fdd-0aae42f393de_efp6TNO4_20260831114541259.webp" alt="《重案六组：消失的警号》高清海报" loading="lazy" decoding="async" />
+	<span class="play hidden-xs"></span>										
+	<span class="score">4.4</span>
+	<span class="note textbg">完结</span>							
+</a>
+
+<div class="title">
+
+	<h3 class="text-overflow"><a href="/movie/index427226.html" title="重案六组：消失的警号">重案六组：消失的警号</a></h3>
+
+</div>
+
+<div class="subtitle text-muted text-overflow hidden-xs">
+
+	张一山,李沐宸,郭晓东,葛铮,赵明川,华雯,肖然,任若希,吴昊宸,丁圣霏,黄品沅,刘伟,迟嘉,鄂靖文,徐洋,郭鹏,赵梓冲,周思羽,刘頔,周劢劼,常方源,高飞,建康,丁文博,于小鸣,刘旭柏,左航,宋元,屠芷莹,罗刚,刘碑歌
+
+</div>
+							    				    						
+								</div>
+								
+							    <div class="col-md-2 col-sm-3 col-xs-4 visible-sm">						    	
+						    		<a class="videopic" href="/movie/index426358.html" title="金色2026" style="background: url(/templets/wapian/images/load.gif) no-repeat; background-position:50% 50%; background-size: cover;" >								
+	<img class="lazy" src="/templets/wapian/images/load.gif" data-original="https://community.codewave.163.com/upload/app/afaec238-82f5-4996-8fdd-0aae42f393de/金色2026_1787651747_afaec238-82f5-4996-8fdd-0aae42f393de_efp0DZS6_20260825175549268.webp" alt="《金色2026》高清海报" loading="lazy" decoding="async" />
+	<span class="play hidden-xs"></span>										
+	<span class="score">6.7</span>
+	<span class="note textbg">已完结</span>							
+</a>
+
+<div class="title">
+
+	<h3 class="text-overflow"><a href="/movie/index426358.html" title="金色2026">金色2026</a></h3>
+
+</div>
+
+<div class="subtitle text-muted text-overflow hidden-xs">
+
+	辛芷蕾,尹昉,陈坤,高伟光,吴汉坤,卜冠今,尹铸胜,李易祥,连奕名,张百乔,郑仲恒,周小飞,洪洋,娄艺潇,贾康熙,曹骏博,葛铮
+
+</div>
+							    				    						
+								</div>
+								
+							    <div class="col-md-2 col-sm-3 col-xs-4 visible-sm">						    	
+						    		<a class="videopic" href="/movie/index428172.html" title="死有对证粤语" style="background: url(/templets/wapian/images/load.gif) no-repeat; background-position:50% 50%; background-size: cover;" >								
+	<img class="lazy" src="/templets/wapian/images/load.gif" data-original="https://community.codewave.163.com/upload/app/afaec238-82f5-4996-8fdd-0aae42f393de/死有对证粤语_1788790870_afaec238-82f5-4996-8fdd-0aae42f393de_efp2JTS4_20260907222113753.webp" alt="《死有对证粤语》高清海报" loading="lazy" decoding="async" />
+	<span class="play hidden-xs"></span>										
+	<span class="score">6.4</span>
+	<span class="note textbg">更新至第12集</span>							
+</a>
+
+<div class="title">
+
+	<h3 class="text-overflow"><a href="/movie/index428172.html" title="死有对证粤语">死有对证粤语</a></h3>
+
+</div>
+
+<div class="subtitle text-muted text-overflow hidden-xs">
+
+	韦家雄,陈晓华,车婉婉,马贯东,吴若希,阮浩棕,韩马利,杜燕歌,王绮琴,陈嘉辉,林熹瞳,唐嘉麟,王菲,谢芷伦,刘芷玲,刘颂鹏,崔锦棠,孟希璘,史颖乔,何伟业,陈少邦,乐嘉珈,张景尧,黄键丰,陈力行
+
+</div>
+							    				    						
+								</div>
+									
+							</div>
+						</div>					
+						<div class="hy-video-text-list hidden-xs clearfix">
+							<div class="item">
+								<ul class="clearfix">
+									
+									<li>	
+										<div class="title text-overflow">
+	<a href="/movie/index426358.html" title="金色2026">
+		<span class="pull-right"><i class="icon iconfont icon-right text-muted"></i></span>
+		金色2026
+	</a>		
+</div>																									
+																										
+									</li>
+									
+									<li>	
+										<div class="title text-overflow">
+	<a href="/movie/index428172.html" title="死有对证粤语">
+		<span class="pull-right"><i class="icon iconfont icon-right text-muted"></i></span>
+		死有对证粤语
+	</a>		
+</div>																									
+																										
+									</li>
+									
+									<li>	
+										<div class="title text-overflow">
+	<a href="/movie/index422039.html" title="九门">
+		<span class="pull-right"><i class="icon iconfont icon-right text-muted"></i></span>
+		九门
+	</a>		
+</div>																									
+																										
+									</li>
+									
+									<li>	
+										<div class="title text-overflow">
+	<a href="/movie/index427228.html" title="飞到我心上">
+		<span class="pull-right"><i class="icon iconfont icon-right text-muted"></i></span>
+		飞到我心上
+	</a>		
+</div>																									
+																										
+									</li>
+									
+									<li>	
+										<div class="title text-overflow">
+	<a href="/movie/index428428.html" title="深渊无间">
+		<span class="pull-right"><i class="icon iconfont icon-right text-muted"></i></span>
+		深渊无间
+	</a>		
+</div>																									
+																										
+									</li>
+									
+									<li>	
+										<div class="title text-overflow">
+	<a href="/movie/index427548.html" title="生逢其时">
+		<span class="pull-right"><i class="icon iconfont icon-right text-muted"></i></span>
+		生逢其时
+	</a>		
+</div>																									
+																										
+									</li>
+									
+									<li>	
+										<div class="title text-overflow">
+	<a href="/movie/index422183.html" title="杀手妈咪">
+		<span class="pull-right"><i class="icon iconfont icon-right text-muted"></i></span>
+		杀手妈咪
+	</a>		
+</div>																									
+																										
+									</li>
+									
+									<li>	
+										<div class="title text-overflow">
+	<a href="/movie/index429474.html" title="一瓯春">
+		<span class="pull-right"><i class="icon iconfont icon-right text-muted"></i></span>
+		一瓯春
+	</a>		
+</div>																									
+																										
+									</li>
+									
+									<li>	
+										<div class="title text-overflow">
+	<a href="/movie/index416331.html" title="金特务：本色回归">
+		<span class="pull-right"><i class="icon iconfont icon-right text-muted"></i></span>
+		金特务：本色回归
+	</a>		
+</div>																									
+																										
+									</li>
+									
+									<li>	
+										<div class="title text-overflow">
+	<a href="/movie/index422165.html" title="现在不是出轨的问题">
+		<span class="pull-right"><i class="icon iconfont icon-right text-muted"></i></span>
+		现在不是出轨的问题
+	</a>		
+</div>																									
+																										
+									</li>
+									
+									<li>	
+										<div class="title text-overflow">
+	<a href="/movie/index4.html" title="知否知否应是绿肥红瘦">
+		<span class="pull-right"><i class="icon iconfont icon-right text-muted"></i></span>
+		知否知否应是绿肥红..
+	</a>		
+</div>																									
+																										
+									</li>
+									
+									<li>	
+										<div class="title text-overflow">
+	<a href="/movie/index423668.html" title="花开锦绣">
+		<span class="pull-right"><i class="icon iconfont icon-right text-muted"></i></span>
+		花开锦绣
+	</a>		
+</div>																									
+																										
+									</li>
+											
+								</ul>
+							</div>							
+						</div>
+					</div>				
+					<div class="hy-video-footer visible-xs clearfix">
+						<a href="/search.php?searchtype=5&order=monthhit&tid=2" class="text-muted" title="查看更多">查看更多 <i class="icon iconfont icon-right pull-right"></i></a>
+					</div>		    																									
+				</div>
+				
+				<!--end 电影/电视剧 -->
+											    
+				<!--综艺-->
+          
+				 <div class="hy-layout clearfix">				    	
+		    		<div class="hy-video-head">
+						<h2 class="margin-0"><i class="icon iconfont icon-flag text-color"></i>综艺</h2>
+						<ul class="pull-right">							
+							<li class="active"><a href="/search.php?searchtype=5&order=weekhit&tid=3" class="text-muted" title="更多">更多 <i class="icon iconfont icon-right"></i></a></li>
+						</ul>
+					</div>
+					<div class="clearfix">
+						<div class="hy-video-list clearfix">
+						    <div class="item">																			
+								
+							    <div class="col-md-2 col-sm-3 col-xs-4 ">						    	
+						    		<a class="videopic" href="/movie/index427726.html" title="花儿与少年第八季" style="background: url(/templets/wapian/images/load.gif) no-repeat; background-position:50% 50%; background-size: cover;" >								
+	<img class="lazy" src="/templets/wapian/images/load.gif" data-original="https://community.codewave.163.com/upload/app/afaec238-82f5-4996-8fdd-0aae42f393de/花儿与少年第八季_1788495045_afaec238-82f5-4996-8fdd-0aae42f393de_efp5TRC6_20260904121046814.webp" alt="《花儿与少年第八季》高清海报" loading="lazy" decoding="async" />
+	<span class="play hidden-xs"></span>										
+	
+	<span class="note textbg">更新至20260920期</span>							
+</a>
+
+<div class="title">
+
+	<h3 class="text-overflow"><a href="/movie/index427726.html" title="花儿与少年第八季">花儿与少年第八季</a></h3>
+
+</div>
+
+<div class="subtitle text-muted text-overflow hidden-xs">
+
+	吴君如,殷桃,林依晨,周冬雨,王可,邓为,王星越
+
+</div>
+							    				    						
+								</div>
+								
+							    <div class="col-md-2 col-sm-3 col-xs-4 ">						    	
+						    		<a class="videopic" href="/movie/index422174.html" title="心动的信号第九季" style="background: url(/templets/wapian/images/load.gif) no-repeat; background-position:50% 50%; background-size: cover;" >								
+	<img class="lazy" src="/templets/wapian/images/load.gif" data-original="https://community.codewave.163.com/upload/app/afaec238-82f5-4996-8fdd-0aae42f393de/心动的信号第九季_1785507624_afaec238-82f5-4996-8fdd-0aae42f393de_efp7YJE3_20260731222026152.webp" alt="《心动的信号第九季》高清海报" loading="lazy" decoding="async" />
+	<span class="play hidden-xs"></span>										
+	
+	<span class="note textbg">更新至20260923期</span>							
+</a>
+
+<div class="title">
+
+	<h3 class="text-overflow"><a href="/movie/index422174.html" title="心动的信号第九季">心动的信号第九季</a></h3>
+
+</div>
+
+<div class="subtitle text-muted text-overflow hidden-xs">
+
+	代旭,杜海涛,薛凯琪,杨超越,张纯烨,曹以恒,陈鹤文,崔凯怡,崔译航,梁人方,沙玥儿,孙柏涵,孙启萌,吴思颖,于洋,赵希伦
+
+</div>
+							    				    						
+								</div>
+								
+							    <div class="col-md-2 col-sm-3 col-xs-4 ">						    	
+						    		<a class="videopic" href="/movie/index420768.html" title="一饭封神2" style="background: url(/templets/wapian/images/load.gif) no-repeat; background-position:50% 50%; background-size: cover;" >								
+	<img class="lazy" src="/templets/wapian/images/load.gif" data-original="https://community.codewave.163.com/upload/app/afaec238-82f5-4996-8fdd-0aae42f393de/一饭封神2_1784821352_afaec238-82f5-4996-8fdd-0aae42f393de_efp9OUG3_20260723234233620.webp" alt="《一饭封神2》高清海报" loading="lazy" decoding="async" />
+	<span class="play hidden-xs"></span>										
+	
+	<span class="note textbg">更新至20260923期</span>							
+</a>
+
+<div class="title">
+
+	<h3 class="text-overflow"><a href="/movie/index420768.html" title="一饭封神2">一饭封神2</a></h3>
+
+</div>
+
+<div class="subtitle text-muted text-overflow hidden-xs">
+
+	谢霆锋 张勇 郑永麒
+
+</div>
+							    				    						
+								</div>
+								
+							    <div class="col-md-2 col-sm-3 col-xs-4 ">						    	
+						    		<a class="videopic" href="/movie/index424479.html" title="大哥小助理" style="background: url(/templets/wapian/images/load.gif) no-repeat; background-position:50% 50%; background-size: cover;" >								
+	<img class="lazy" src="/templets/wapian/images/load.gif" data-original="https://community.codewave.163.com/upload/app/afaec238-82f5-4996-8fdd-0aae42f393de/大哥小助理_1786681228_afaec238-82f5-4996-8fdd-0aae42f393de_efp2OMJ9_20260814122031503.jpg" alt="《大哥小助理》高清海报" loading="lazy" decoding="async" />
+	<span class="play hidden-xs"></span>										
+	
+	<span class="note textbg">更新至第20260923期</span>							
+</a>
+
+<div class="title">
+
+	<h3 class="text-overflow"><a href="/movie/index424479.html" title="大哥小助理">大哥小助理</a></h3>
+
+</div>
+
+<div class="subtitle text-muted text-overflow hidden-xs">
+
+	胡军 李乃文
+
+</div>
+							    				    						
+								</div>
+								
+							    <div class="col-md-2 col-sm-3 col-xs-4 ">						    	
+						    		<a class="videopic" href="/movie/index417524.html" title="说唱巅峰对决" style="background: url(/templets/wapian/images/load.gif) no-repeat; background-position:50% 50%; background-size: cover;" >								
+	<img class="lazy" src="/templets/wapian/images/load.gif" data-original="https://community.codewave.163.com:443/upload/app/afaec238-82f5-4996-8fdd-0aae42f393de/说唱巅峰对决_1782542447_afaec238-82f5-4996-8fdd-0aae42f393de_efp7HDB2_20260627144050159.webp" alt="《说唱巅峰对决》高清海报" loading="lazy" decoding="async" />
+	<span class="play hidden-xs"></span>										
+	
+	<span class="note textbg">更新至20260918期</span>							
+</a>
+
+<div class="title">
+
+	<h3 class="text-overflow"><a href="/movie/index417524.html" title="说唱巅峰对决">说唱巅峰对决</a></h3>
+
+</div>
+
+<div class="subtitle text-muted text-overflow hidden-xs">
+
+	严浩翔,谢帝,艾热,派克特,功夫胖,盛宇,杨长青,刘嘉裕,米尔艾力,李斯丹妮,布瑞吉,翁杰,黄旭,杨博睿,吴嘉轩,白景屹,贰万,孙旸,李大奔,徐赢,郭颖
+
+</div>
+							    				    						
+								</div>
+								
+							    <div class="col-md-2 col-sm-3 col-xs-4 ">						    	
+						    		<a class="videopic" href="/movie/index425324.html" title="街头世界斗士：编导之战" style="background: url(/templets/wapian/images/load.gif) no-repeat; background-position:50% 50%; background-size: cover;" >								
+	<img class="lazy" src="/templets/wapian/images/load.gif" data-original="https://community.codewave.163.com/upload/app/afaec238-82f5-4996-8fdd-0aae42f393de/街头世界斗士编导之战_1787117758_afaec238-82f5-4996-8fdd-0aae42f393de_efp5DHS1_20260819133602307.webp" alt="《街头世界斗士：编导之战》高清海报" loading="lazy" decoding="async" />
+	<span class="play hidden-xs"></span>										
+	
+	<span class="note textbg">更新至06期</span>							
+</a>
+
+<div class="title">
+
+	<h3 class="text-overflow"><a href="/movie/index425324.html" title="街头世界斗士：编导之战">街头世界斗士：编导之战</a></h3>
+
+</div>
+
+<div class="subtitle text-muted text-overflow hidden-xs">
+
+	曺娜寅,Renan,Bada Lee,白久英,베이비주,沈熙贞,金仁圭,郑敏俊,Kasper,成韩彬
+
+</div>
+							    				    						
+								</div>
+								
+							    <div class="col-md-2 col-sm-3 col-xs-4 visible-sm">						    	
+						    		<a class="videopic" href="/movie/index422181.html" title="宇宙年糕店" style="background: url(/templets/wapian/images/load.gif) no-repeat; background-position:50% 50%; background-size: cover;" >								
+	<img class="lazy" src="/templets/wapian/images/load.gif" data-original="https://community.codewave.163.com/upload/app/afaec238-82f5-4996-8fdd-0aae42f393de/宇宙年糕店_1785512425_afaec238-82f5-4996-8fdd-0aae42f393de_efp1ULL3_20260731234027151.webp" alt="《宇宙年糕店》高清海报" loading="lazy" decoding="async" />
+	<span class="play hidden-xs"></span>										
+	<span class="score">8.5</span>
+	<span class="note textbg">更新至08期</span>							
+</a>
+
+<div class="title">
+
+	<h3 class="text-overflow"><a href="/movie/index422181.html" title="宇宙年糕店">宇宙年糕店</a></h3>
+
+</div>
+
+<div class="subtitle text-muted text-overflow hidden-xs">
+
+	李恩智,金美贤,李泳知,安宥真
+
+</div>
+							    				    						
+								</div>
+								
+							    <div class="col-md-2 col-sm-3 col-xs-4 visible-sm">						    	
+						    		<a class="videopic" href="/movie/index413405.html" title="生意天才白社长3" style="background: url(/templets/wapian/images/load.gif) no-repeat; background-position:50% 50%; background-size: cover;" >								
+	<img class="lazy" src="/templets/wapian/images/load.gif" data-original="https://community.codewave.163.com:443/upload/app/afaec238-82f5-4996-8fdd-0aae42f393de/生意天才白社长3_2026_afaec238-82f5-4996-8fdd-0aae42f393de_efp0EVV6_20260308232756017.webp" alt="《生意天才白社长3》高清海报" loading="lazy" decoding="async" />
+	<span class="play hidden-xs"></span>										
+	
+	<span class="note textbg">已完结</span>							
+</a>
+
+<div class="title">
+
+	<h3 class="text-overflow"><a href="/movie/index413405.html" title="生意天才白社长3">生意天才白社长3</a></h3>
+
+</div>
+
+<div class="subtitle text-muted text-overflow hidden-xs">
+
+	白种元,李章宇,朴成奎,侑莉,尹施允
+
+</div>
+							    				    						
+								</div>
+									
+							</div>
+						</div>					
+						<div class="hy-video-text-list hidden-xs clearfix">
+							<div class="item">
+								<ul class="clearfix">
+									
+									<li>	
+										<div class="title text-overflow">
+	<a href="/movie/index422181.html" title="宇宙年糕店">
+		<span class="pull-right"><i class="icon iconfont icon-right text-muted"></i></span>
+		宇宙年糕店
+	</a>		
+</div>																									
+																										
+									</li>
+									
+									<li>	
+										<div class="title text-overflow">
+	<a href="/movie/index413405.html" title="生意天才白社长3">
+		<span class="pull-right"><i class="icon iconfont icon-right text-muted"></i></span>
+		生意天才白社长3
+	</a>		
+</div>																									
+																										
+									</li>
+									
+									<li>	
+										<div class="title text-overflow">
+	<a href="/movie/index17063.html" title="极限挑战第三季">
+		<span class="pull-right"><i class="icon iconfont icon-right text-muted"></i></span>
+		极限挑战第三季
+	</a>		
+</div>																									
+																										
+									</li>
+									
+									<li>	
+										<div class="title text-overflow">
+	<a href="/movie/index213396.html" title="向往的生活第三季">
+		<span class="pull-right"><i class="icon iconfont icon-right text-muted"></i></span>
+		向往的生活第三季
+	</a>		
+</div>																									
+																										
+									</li>
+									
+									<li>	
+										<div class="title text-overflow">
+	<a href="/movie/index423678.html" title="披荆斩棘第六季">
+		<span class="pull-right"><i class="icon iconfont icon-right text-muted"></i></span>
+		披荆斩棘第六季
+	</a>		
+</div>																									
+																										
+									</li>
+									
+									<li>	
+										<div class="title text-overflow">
+	<a href="/movie/index415910.html" title="忙忙碌碌寻宝藏·双人成行季">
+		<span class="pull-right"><i class="icon iconfont icon-right text-muted"></i></span>
+		忙忙碌碌寻宝藏·双..
+	</a>		
+</div>																									
+																										
+									</li>
+									
+									<li>	
+										<div class="title text-overflow">
+	<a href="/movie/index415136.html" title="喜欢你我也是第六季">
+		<span class="pull-right"><i class="icon iconfont icon-right text-muted"></i></span>
+		喜欢你我也是第六季
+	</a>		
+</div>																									
+																										
+									</li>
+									
+									<li>	
+										<div class="title text-overflow">
+	<a href="/movie/index426514.html" title="天才厨人">
+		<span class="pull-right"><i class="icon iconfont icon-right text-muted"></i></span>
+		天才厨人
+	</a>		
+</div>																									
+																										
+									</li>
+									
+									<li>	
+										<div class="title text-overflow">
+	<a href="/movie/index424093.html" title="只要有空第五季">
+		<span class="pull-right"><i class="icon iconfont icon-right text-muted"></i></span>
+		只要有空第五季
+	</a>		
+</div>																									
+																										
+									</li>
+									
+									<li>	
+										<div class="title text-overflow">
+	<a href="/movie/index423525.html" title="伦敦合伙人">
+		<span class="pull-right"><i class="icon iconfont icon-right text-muted"></i></span>
+		伦敦合伙人
+	</a>		
+</div>																									
+																										
+									</li>
+									
+									<li>	
+										<div class="title text-overflow">
+	<a href="/movie/index386687.html" title="花儿与少年·丝路季">
+		<span class="pull-right"><i class="icon iconfont icon-right text-muted"></i></span>
+		花儿与少年·丝路季
+	</a>		
+</div>																									
+																										
+									</li>
+									
+									<li>	
+										<div class="title text-overflow">
+	<a href="/movie/index286818.html" title="花儿与少年第三季">
+		<span class="pull-right"><i class="icon iconfont icon-right text-muted"></i></span>
+		花儿与少年第三季
+	</a>		
+</div>																									
+																										
+									</li>
+											
+								</ul>
+							</div>							
+						</div>
+					</div>				
+					<div class="hy-video-footer visible-xs clearfix">
+						<a href="/search.php?searchtype=5&order=weekhit&tid=3" class="text-muted" title="查看更多">查看更多 <i class="icon iconfont icon-right pull-right"></i></a>
+					</div>		    																									
+				</div>
+          
+				<!--end 综艺-->
+				
+				<!--动漫-->
+				
+				<div class="hy-layout clearfix">				    	
+		    		<div class="hy-video-head">
+						<h2 class="margin-0"><i class="icon iconfont icon-mallanimation text-color"></i>动漫</h2>
+						<ul class="pull-right">							
+							<li class="active"><a href="/search.php?searchtype=5&order=weekhit&tid=4" class="text-muted" title="更多">更多 <i class="icon iconfont icon-right"></i></a></li>
+						</ul>
+					</div>
+					<div class="clearfix">
+						<div class="hy-video-list clearfix">
+						    <div class="item">																			
+								
+							    <div class="col-md-2 col-sm-3 col-xs-4 ">						    	
+						    		<a class="videopic" href="/movie/index386037.html" title="仙逆" style="background: url(/templets/wapian/images/load.gif) no-repeat; background-position:50% 50%; background-size: cover;" >								
+	<img class="lazy" src="/templets/wapian/images/load.gif" data-original="https://community.codewave.163.com:443/upload/app/afaec238-82f5-4996-8fdd-0aae42f393de/6fcb177b33c3c63a_afaec238-82f5-4996-8fdd-0aae42f393de_efp5VEQ8_20260308154725070.jpg" alt="《仙逆》高清海报" loading="lazy" decoding="async" />
+	<span class="play hidden-xs"></span>										
+	<span class="score">8.1</span>
+	<span class="note textbg">更新至第159集</span>							
+</a>
+
+<div class="title">
+
+	<h3 class="text-overflow"><a href="/movie/index386037.html" title="仙逆">仙逆</a></h3>
+
+</div>
+
+<div class="subtitle text-muted text-overflow hidden-xs">
+
+	
+
+</div>
+							    				    						
+								</div>
+								
+							    <div class="col-md-2 col-sm-3 col-xs-4 ">						    	
+						    		<a class="videopic" href="/movie/index283480.html" title="吞噬星空" style="background: url(/templets/wapian/images/load.gif) no-repeat; background-position:50% 50%; background-size: cover;" >								
+	<img class="lazy" src="/templets/wapian/images/load.gif" data-original="https://community.codewave.163.com:443/upload/app/afaec238-82f5-4996-8fdd-0aae42f393de/8e7ffcdb26815648_afaec238-82f5-4996-8fdd-0aae42f393de_efp2HDY2_20260308224925010.jpg" alt="《吞噬星空》高清海报" loading="lazy" decoding="async" />
+	<span class="play hidden-xs"></span>										
+	
+	<span class="note textbg">更新至第242集</span>							
+</a>
+
+<div class="title">
+
+	<h3 class="text-overflow"><a href="/movie/index283480.html" title="吞噬星空">吞噬星空</a></h3>
+
+</div>
+
+<div class="subtitle text-muted text-overflow hidden-xs">
+
+	赵乾景,谢莹,宋国庆,黄进则,张若瑜
+
+</div>
+							    				    						
+								</div>
+								
+							    <div class="col-md-2 col-sm-3 col-xs-4 ">						    	
+						    		<a class="videopic" href="/movie/index384547.html" title="大主宰年番" style="background: url(/templets/wapian/images/load.gif) no-repeat; background-position:50% 50%; background-size: cover;" >								
+	<img class="lazy" src="/templets/wapian/images/load.gif" data-original="https://community.codewave.163.com/upload/app/afaec238-82f5-4996-8fdd-0aae42f393de/大主宰年番_1783668639_afaec238-82f5-4996-8fdd-0aae42f393de_efp3DUP5_20260710153041664.jpg" alt="《大主宰年番》高清海报" loading="lazy" decoding="async" />
+	<span class="play hidden-xs"></span>										
+	
+	<span class="note textbg">更新至第91集</span>							
+</a>
+
+<div class="title">
+
+	<h3 class="text-overflow"><a href="/movie/index384547.html" title="大主宰年番">大主宰年番</a></h3>
+
+</div>
+
+<div class="subtitle text-muted text-overflow hidden-xs">
+
+	
+
+</div>
+							    				    						
+								</div>
+								
+							    <div class="col-md-2 col-sm-3 col-xs-4 ">						    	
+						    		<a class="videopic" href="/movie/index413532.html" title="遮天动画版" style="background: url(/templets/wapian/images/load.gif) no-repeat; background-position:50% 50%; background-size: cover;" >								
+	<img class="lazy" src="/templets/wapian/images/load.gif" data-original="https://community.codewave.163.com:443/upload/app/afaec238-82f5-4996-8fdd-0aae42f393de/遮天动画版_2023_afaec238-82f5-4996-8fdd-0aae42f393de_efp5FBI6_20260308232814988.jpg" alt="《遮天动画版》高清海报" loading="lazy" decoding="async" />
+	<span class="play hidden-xs"></span>										
+	
+	<span class="note textbg">更新至第182集</span>							
+</a>
+
+<div class="title">
+
+	<h3 class="text-overflow"><a href="/movie/index413532.html" title="遮天动画版">遮天动画版</a></h3>
+
+</div>
+
+<div class="subtitle text-muted text-overflow hidden-xs">
+
+	
+
+</div>
+							    				    						
+								</div>
+								
+							    <div class="col-md-2 col-sm-3 col-xs-4 ">						    	
+						    		<a class="videopic" href="/movie/index395384.html" title="牧神记" style="background: url(/templets/wapian/images/load.gif) no-repeat; background-position:50% 50%; background-size: cover;" >								
+	<img class="lazy" src="/templets/wapian/images/load.gif" data-original="https://community.codewave.163.com:443/upload/app/afaec238-82f5-4996-8fdd-0aae42f393de/ed97c38ca3de2a01_afaec238-82f5-4996-8fdd-0aae42f393de_efp4FZU8_20260308215235616.jpg" alt="《牧神记》高清海报" loading="lazy" decoding="async" />
+	<span class="play hidden-xs"></span>										
+	<span class="score">8.8</span>
+	<span class="note textbg">更新至第101集</span>							
+</a>
+
+<div class="title">
+
+	<h3 class="text-overflow"><a href="/movie/index395384.html" title="牧神记">牧神记</a></h3>
+
+</div>
+
+<div class="subtitle text-muted text-overflow hidden-xs">
+
+	张若瑜,李欣,程玉珠,杜晴晴,虞晓旭,于凯隆,高嗣航,张恒,王宇航,刘宇轩,唐昊
+
+</div>
+							    				    						
+								</div>
+								
+							    <div class="col-md-2 col-sm-3 col-xs-4 ">						    	
+						    		<a class="videopic" href="/movie/index386007.html" title="逆天邪神3D" style="background: url(/templets/wapian/images/load.gif) no-repeat; background-position:50% 50%; background-size: cover;" >								
+	<img class="lazy" src="/templets/wapian/images/load.gif" data-original="https://community.codewave.163.com:443/upload/app/afaec238-82f5-4996-8fdd-0aae42f393de/ac07a898a0776977_afaec238-82f5-4996-8fdd-0aae42f393de_efp9FUU9_20260308224437216.jpg" alt="《逆天邪神3D》高清海报" loading="lazy" decoding="async" />
+	<span class="play hidden-xs"></span>										
+	
+	<span class="note textbg">更新至第55集</span>							
+</a>
+
+<div class="title">
+
+	<h3 class="text-overflow"><a href="/movie/index386007.html" title="逆天邪神3D">逆天邪神3D</a></h3>
+
+</div>
+
+<div class="subtitle text-muted text-overflow hidden-xs">
+
+	郭鸿博,冯骏骅,醋醋,筱筝,富贵,沈达威,不一,谢添天
+
+</div>
+							    				    						
+								</div>
+								
+							    <div class="col-md-2 col-sm-3 col-xs-4 visible-sm">						    	
+						    		<a class="videopic" href="/movie/index259532.html" title="凡人修仙传" style="background: url(/templets/wapian/images/load.gif) no-repeat; background-position:50% 50%; background-size: cover;" >								
+	<img class="lazy" src="/templets/wapian/images/load.gif" data-original="https://community.codewave.163.com:443/upload/app/afaec238-82f5-4996-8fdd-0aae42f393de/凡人修仙传_1782543025_afaec238-82f5-4996-8fdd-0aae42f393de_efp7MVA4_20260627145026494.jpg" alt="《凡人修仙传》高清海报" loading="lazy" decoding="async" />
+	<span class="play hidden-xs"></span>										
+	<span class="score">7.5</span>
+	<span class="note textbg">更新至第192集</span>							
+</a>
+
+<div class="title">
+
+	<h3 class="text-overflow"><a href="/movie/index259532.html" title="凡人修仙传">凡人修仙传</a></h3>
+
+</div>
+
+<div class="subtitle text-muted text-overflow hidden-xs">
+
+	钱文青,杨天翔,杨默,歪歪,谷江山,乔诗语,佟心竹
+
+</div>
+							    				    						
+								</div>
+								
+							    <div class="col-md-2 col-sm-3 col-xs-4 visible-sm">						    	
+						    		<a class="videopic" href="/movie/index414248.html" title="关于我转生变成史莱姆这档事第四季" style="background: url(/templets/wapian/images/load.gif) no-repeat; background-position:50% 50%; background-size: cover;" >								
+	<img class="lazy" src="/templets/wapian/images/load.gif" data-original="https://community.codewave.163.com:443/upload/app/afaec238-82f5-4996-8fdd-0aae42f393de/关于我转生变成史莱姆这档事第四季_1782543086_afaec238-82f5-4996-8fdd-0aae42f393de_efp0MQB3_20260627145127178.jpg" alt="《关于我转生变成史莱姆这档事第四季》高清海报" loading="lazy" decoding="async" />
+	<span class="play hidden-xs"></span>										
+	
+	<span class="note textbg">更新至第23集</span>							
+</a>
+
+<div class="title">
+
+	<h3 class="text-overflow"><a href="/movie/index414248.html" title="关于我转生变成史莱姆这档事第四季">关于我转生变成史莱姆这档事第四季</a></h3>
+
+</div>
+
+<div class="subtitle text-muted text-overflow hidden-xs">
+
+	冈咲美保,丰口惠美,前野智昭,古川慎,千本木彩花,市道真央,江口拓也,大塚芳忠,山本兼平,泊明日菜,小林亲弘,日高里菜,春野杏,樱井孝宏,青山穰,Lynn,沼仓爱美,松冈祯丞,小野大辅,水濑祈,花江夏树
+
+</div>
+							    				    						
+								</div>
+									
+							</div>
+						</div>					
+						<div class="hy-video-text-list hidden-xs clearfix">
+							<div class="item">
+								<ul class="clearfix">
+									
+									<li>	
+										<div class="title text-overflow">
+	<a href="/movie/index259532.html" title="凡人修仙传">
+		<span class="pull-right"><i class="icon iconfont icon-right text-muted"></i></span>
+		凡人修仙传
+	</a>		
+</div>																									
+																										
+									</li>
+									
+									<li>	
+										<div class="title text-overflow">
+	<a href="/movie/index414248.html" title="关于我转生变成史莱姆这档事第四季">
+		<span class="pull-right"><i class="icon iconfont icon-right text-muted"></i></span>
+		关于我转生变成史莱..
+	</a>		
+</div>																									
+																										
+									</li>
+									
+									<li>	
+										<div class="title text-overflow">
+	<a href="/movie/index425565.html" title="诛仙第四季">
+		<span class="pull-right"><i class="icon iconfont icon-right text-muted"></i></span>
+		诛仙第四季
+	</a>		
+</div>																									
+																										
+									</li>
+									
+									<li>	
+										<div class="title text-overflow">
+	<a href="/movie/index418623.html" title="无职转生3到了异世界就拿出真本事">
+		<span class="pull-right"><i class="icon iconfont icon-right text-muted"></i></span>
+		无职转生3到了异世..
+	</a>		
+</div>																									
+																										
+									</li>
+									
+									<li>	
+										<div class="title text-overflow">
+	<a href="/movie/index304068.html" title="万界独尊">
+		<span class="pull-right"><i class="icon iconfont icon-right text-muted"></i></span>
+		万界独尊
+	</a>		
+</div>																									
+																										
+									</li>
+									
+									<li>	
+										<div class="title text-overflow">
+	<a href="/movie/index418309.html" title="被追放的转生重骑士用游戏知识开无双">
+		<span class="pull-right"><i class="icon iconfont icon-right text-muted"></i></span>
+		被追放的转生重骑士..
+	</a>		
+</div>																									
+																										
+									</li>
+									
+									<li>	
+										<div class="title text-overflow">
+	<a href="/movie/index418675.html" title="碧蓝之海 第三季">
+		<span class="pull-right"><i class="icon iconfont icon-right text-muted"></i></span>
+		碧蓝之海 第三季
+	</a>		
+</div>																									
+																										
+									</li>
+									
+									<li>	
+										<div class="title text-overflow">
+	<a href="/movie/index416256.html" title="斩神之凡尘神域Ⅱ">
+		<span class="pull-right"><i class="icon iconfont icon-right text-muted"></i></span>
+		斩神之凡尘神域Ⅱ
+	</a>		
+</div>																									
+																										
+									</li>
+									
+									<li>	
+										<div class="title text-overflow">
+	<a href="/movie/index6844.html" title="海贼王">
+		<span class="pull-right"><i class="icon iconfont icon-right text-muted"></i></span>
+		海贼王
+	</a>		
+</div>																									
+																										
+									</li>
+									
+									<li>	
+										<div class="title text-overflow">
+	<a href="/movie/index382139.html" title="遮天">
+		<span class="pull-right"><i class="icon iconfont icon-right text-muted"></i></span>
+		遮天
+	</a>		
+</div>																									
+																										
+									</li>
+									
+									<li>	
+										<div class="title text-overflow">
+	<a href="/movie/index29073.html" title="火影忍者">
+		<span class="pull-right"><i class="icon iconfont icon-right text-muted"></i></span>
+		火影忍者
+	</a>		
+</div>																									
+																										
+									</li>
+									
+									<li>	
+										<div class="title text-overflow">
+	<a href="/movie/index422040.html" title="太古神尊">
+		<span class="pull-right"><i class="icon iconfont icon-right text-muted"></i></span>
+		太古神尊
+	</a>		
+</div>																									
+																										
+									</li>
+											
+								</ul>
+							</div>							
+						</div>
+					</div>				
+					<div class="hy-video-footer visible-xs clearfix">
+						<a href="/search.php?searchtype=5&order=weekhit&tid=4" class="text-muted" title="查看更多">查看更多 <i class="icon iconfont icon-right pull-right"></i></a>
+					</div>		    																									
+				</div>
+				
+				<!--end 动漫-->							
+				<!--友链-->	
+				<div class="hy-layout hidden-sm hidden-xs clearfix">					
+					<div class="hy-video-head">
+						<h2 class="margin-0">友情链接</h2>							
+					</div>
+					<div class="hy-footer-link">
+						<div class="item clearfix">
+							<ul class="clearfix">
+								
+							
+							</ul>
+						</div>
+					</div>
+				</div>
+				<!--end 友链 -->
+
+			</div>
+		</div>
+	<script src="/templets/wapian/images/js/lazy-swiper.js?v=20260730a" defer></script>
+	</main>
+	<div class="hy-gototop hidden-sm hidden-xs">
+	<ul class="item clearfix">
+		<li><a href="/gbook.php" title="留言求片" aria-label="留言求片"><i class="icon iconfont icon-comment"></i></a></li>
+		<li>
+			<button type="button" class="hy-gototop-action" title="观看记录" aria-label="观看记录"><i class="icon iconfont icon-record1"></i></button>
+			<div class="history clearfix">
+				<div class="head">
+					<strong class="margin-0 text-muted">观看历史</strong>
+				</div>
+				<div id="HISTORY"></div>
+			</div>			
+		</li>		
+		<li>
+			<button type="button" class="hy-gototop-action" title="二维码" aria-label="二维码"><i class="icon iconfont icon-code1"></i></button>
+			<div class="code clearfix">
+				<p class="margin-0"><img class="pic-responsive" src="/templets/wapian/images/rwm.png" height="120" width="120" alt="扫描二维码" loading="lazy" /></p>					
+			</div>
+		</li>
+		<li class="desktop-theme-utility">
+			<button class="hy-gototop-action desktop-theme-toggle" type="button" title="切换显示主题" aria-label="切换显示主题" aria-expanded="false" aria-controls="desktop-theme-panel"><i class="icon iconfont icon-setting" aria-hidden="true"></i></button>
+			<div class="desktop-theme-panel" id="desktop-theme-panel" hidden>
+				<strong>显示主题</strong>
+				<div class="theme-mode-options" role="radiogroup" aria-label="主题模式">
+					<button type="button" data-theme-mode-option="system" aria-pressed="false">跟随系统</button>
+					<button type="button" data-theme-mode-option="light" aria-pressed="false">亮色</button>
+					<button type="button" data-theme-mode-option="dark" aria-pressed="false">暗色</button>
+				</div>
+			</div>
+		</li>
+		<li><button type="button" class="hy-gototop-action" data-scroll-top title="返回顶部" aria-label="返回顶部"><i class="icon iconfont icon-uparrow"></i></button></li>
+	</ul>
+</div>
+<div class="container">
+	<div class="row">
+		<div class="hy-footer clearfix">
+          <p class="visible-xs"><a class="text-muted" href="/gbook.php" title="留言求片"><i class="icon iconfont icon-comment"></i> 留言求片 </a>
+                                <a class="text-muted" href="//daishu.one" target="_blank" rel="noopener" title="app下载"> <i class="icon iconfont icon-collection"></i> APP下载 </a>
+         	</p>
+			<p class="text-muted hidden-sm hidden-xs">
+				本网站内容收集于互联网，袋鼠影视不承担任何由于内容的合法性及健康性所引起的争议和法律责任。 如内容侵犯贵公司权益，请联系站长删除<br> 永久免费更新最新电影与剧集，欢迎大家使用并推荐朋友。
+			</p>
+                       <p class="hidden-xs">
+					<a target="_blank" rel="noopener" href="/sitemap.xml">站内地图 </a><span class="split-line"></span>
+					<a target="_blank" rel="noopener" href="/xml/rss.xml">RSS订阅 </a><span class="split-line"></span>
+					<a target="_blank" rel="noopener" href="/xml/google.xml">谷歌地图 </a><span class="split-line"></span>
+					<a target="_blank" rel="noopener" href="/xml/baidu.xml">百度地图 </a></p>
+			<p class="margin-0 text-muted">Copyright © 2015-2026  All Rights Reserved</p>
+		</div>
+	</div>
+</div>
+<script>
+window.__SEA_FOOTER__ = {
+    name: '{playpage:name}',
+    url: '{playpage:url}',
+    pic: '{playpage:pic}',
+    adUrl: '/js/lib/jquery-pcs.js?v=202608251443'
+};
+</script>
+<script>
+(function(){
+    var s = document.createElement('script');
+    s.src = '/templets/wapian/im' + 'ages/js/site-footer.js?v=20260825d';
+    s.defer = true;
+    document.head.appendChild(s);
+})();
+</script>
+
+
+</body>
+</html>

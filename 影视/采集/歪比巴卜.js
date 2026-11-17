@@ -6,7 +6,7 @@
  * @searchable 1
  * @quickSearch 1
  * @changeable 0
- * @version 1.0.5
+ * @version 1.0.7
  * @downloadURL https://github.com/Silent1566/OmniBox-Spider/raw/main/影视/采集/歪比巴卜.js
  */
 
@@ -53,23 +53,122 @@ const httpClient = axios.create({
   timeout: SITE.timeout,
   httpAgent: new http.Agent({ keepAlive: true }),
   httpsAgent: new https.Agent({ keepAlive: true, rejectUnauthorized: false }),
+  maxRedirects: 0,
   validateStatus: () => true,
   headers: {
     'User-Agent': SITE.ua,
     'Referer': `${SITE.host}/`,
-    'Accept-Language': 'zh-CN,zh;q=0.9',
+    'Cache-Control': 'no-cache',
+    'Pragma': 'no-cache',
+    'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8',
+    'Accept-Language': 'zh-CN,zh;q=0.9,en;q=0.8',
+    'Sec-Fetch-Dest': 'document',
+    'Sec-Fetch-Mode': 'navigate',
+    'Sec-Fetch-Site': 'same-origin',
+    'Upgrade-Insecure-Requests': '1',
   },
 });
 
-function ok(res) {
-  if (res.status < 200 || res.status >= 300) throw new Error(`HTTP ${res.status}`);
-  return res.data || '';
+const siteCookies = new Map();
+
+function mergeCookies(setCookie) {
+  const items = Array.isArray(setCookie) ? setCookie : (setCookie ? [setCookie] : []);
+  for (const raw of items) {
+    const pair = String(raw || '').split(';')[0].trim();
+    const pos = pair.indexOf('=');
+    if (pos <= 0) continue;
+    const name = pair.slice(0, pos).trim();
+    const value = pair.slice(pos + 1).trim();
+    if (name) siteCookies.set(name, value);
+  }
+}
+
+function cookieHeader() {
+  return [...siteCookies.entries()]
+    .filter(([, value]) => value)
+    .map(([name, value]) => `${name}=${value}`)
+    .join('; ');
+}
+
+function looksLikeCookieChallenge(html = '') {
+  const text = String(html || '');
+  return text.length <= 1024 && /window\.location\.href\s*=\s*["'](?:https?:\/\/wbbb1\.com)?\//i.test(text);
+}
+
+function looksLikeSlideChallenge(html = '') {
+  const text = String(html || '');
+  return /<title>\s*滑动验证\s*<\/title>/i.test(text)
+    && /src=["'][^"']*\/huadong_[^"']*\.js(?:\?[^"']*)?["']/i.test(text);
+}
+
+function extractSlideChallengeToken(html) {
+  const src = pickMatch(html, /src=["']([^"']*\/huadong_[^"']*\.js(?:\?[^"']*)?)["']/i, 1, '');
+  if (!src) return null;
+  const path = src.startsWith('/') ? src : `/${src}`;
+  const jsUrl = absUrl(path);
+  const id = pickMatch(jsUrl, /[?&]id=([0-9]+)/i, 1, '');
+  if (!id) return null;
+  const key = pickMatch(jsUrl, /([0-9a-f]{8})_([0-9a-f]{32})\.js/i, 2, '');
+  if (!key) return null;
+  return { jsUrl, id, key };
+}
+
+function slideChallengeSignature(value) {
+  let text = '';
+  for (let i = 0; i <= String(value || '').length - 1; i++) {
+    text += String(String(value || '').charCodeAt(i) + 1);
+  }
+  return CryptoJS.MD5(text).toString();
+}
+
+async function resolveSlideChallenge(fullUrl) {
+  const firstRes = await httpClient.get(fullUrl, { headers: { Cookie: cookieHeader() } });
+  lastStatus = firstRes.status;
+  mergeCookies(firstRes.headers?.['set-cookie']);
+  if (!looksLikeSlideChallenge(firstRes.data)) return firstRes;
+
+  const token = extractSlideChallengeToken(firstRes.data);
+  if (!token) throw new Error('slide challenge token missing');
+
+  const scriptRes = await httpClient.get(token.jsUrl, { headers: { Cookie: cookieHeader(), Referer: fullUrl } });
+  lastStatus = scriptRes.status;
+  mergeCookies(scriptRes.headers?.['set-cookie']);
+  const scriptValue = pickMatch(scriptRes.data, /key=["']([^"']*)["']\s*,\s*value=["']([^"']*)["']/i, 2, '');
+  if (!scriptValue) throw new Error('slide challenge value missing');
+
+  const verifyUrl = `https://wbbb1.com/a20be899_96a6_40b2_88ba_32f1f75f1552_yanzheng_huadong.php?type=ad82060c2e67cc7e2cc47552a4fc1242&key=${encodeURIComponent(token.key)}&value=${encodeURIComponent(slideChallengeSignature(scriptValue))}`;
+  const verifyRes = await httpClient.get(verifyUrl, { headers: { Cookie: cookieHeader(), Referer: fullUrl } });
+  lastStatus = verifyRes.status;
+  mergeCookies(verifyRes.headers?.['set-cookie']);
+
+  return await httpClient.get(fullUrl, { headers: { Cookie: cookieHeader(), Referer: `${SITE.host}/` } });
 }
 
 async function getHtml(url) {
   const full = /^https?:\/\//.test(url) ? url : `${SITE.host}${url}`;
-  const res = await httpClient.get(full);
-  return ok(res);
+  let lastStatus = '';
+  for (let attempt = 0; attempt < 3; attempt++) {
+    const cookie = cookieHeader();
+    const res = await httpClient.get(full, cookie ? { headers: { Cookie: cookie } } : undefined);
+    lastStatus = res.status;
+    mergeCookies(res.headers?.['set-cookie']);
+    if (res.status >= 200 && res.status < 300 && !looksLikeCookieChallenge(res.data)) {
+      return res.data || '';
+    }
+    if (res.status === 403 && looksLikeSlideChallenge(res.data)) {
+      OmniBox.log('info', `[wbbb][html][slide-challenge] url=${redactSensitive(full)}, attempt=${attempt + 1}`);
+      const retryRes = await resolveSlideChallenge(full);
+      mergeCookies(retryRes.headers?.['set-cookie']);
+      if (retryRes.status >= 200 && retryRes.status < 300 && !looksLikeSlideChallenge(retryRes.data)) {
+        return retryRes.data || '';
+      }
+      break;
+    }
+    if (res.status !== 403 || !cookieHeader()) break;
+    OmniBox.log('info', `[wbbb][html][cookie-retry] url=${redactSensitive(full)}, attempt=${attempt + 1}, htmlLength=${String(res.data || '').length}`);
+    await new Promise((resolve) => setTimeout(resolve, 250));
+  }
+  throw new Error(`HTTP ${lastStatus || 'request failed'}`);
 }
 
 function pickMatch(str, reg, idx = 1, def = '') {

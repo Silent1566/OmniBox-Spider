@@ -2,7 +2,7 @@
 // @author 
 // @description 刮削：支持，弹幕：支持，嗅探：支持，广告：有
 // @dependencies: axios, cheerio
-// @version 1.0.6
+// @version 1.1.0
 // @downloadURL https://gh-proxy.org/https://github.com/Silent1566/OmniBox-Spider/raw/refs/heads/main/影视/采集/乐兔.js
 
 const axios = require("axios");
@@ -12,7 +12,7 @@ const cheerio = require("cheerio");
 const OmniBox = require("omnibox_sdk");
 
 // ==================== 配置区域 ====================
-const HOST = process.env.LETU_HOST || "https://www.letu.me";
+const HOST = process.env.LETU_HOST || process.env.QQYS_HOST || "https://www.qqys01.com";
 const DANMU_API = process.env.DANMU_API || "";
 const PAGE_LIMIT = 20;
 
@@ -67,7 +67,7 @@ function getClasses() {
     { type_id: "2", type_name: "电视剧" },
     { type_id: "3", type_name: "综艺" },
     { type_id: "4", type_name: "动漫" },
-    { type_id: "5", type_name: "短剧" },
+    // 新站分类只有 1-4，5 是资讯页，不能作为影视分类
   ];
 }
 
@@ -75,24 +75,38 @@ function getFilters() {
   return {};
 }
 
+function normalizeVodId(href) {
+  const value = String(href || "");
+  const match = value.match(/\/voddetail(\d+)\.html/);
+  return match ? `/voddetail${match[1]}.html` : value;
+}
+
+function normalizePicUrl(value) {
+  const pic = String(value || "");
+  return pic ? toAbsUrl(pic) : "";
+}
+
 function parseCardList(html) {
   const $ = cheerio.load(html || "");
   const list = [];
+  const seen = new Set();
 
-  $(".grid.container_list .s6").each((_, element) => {
+  $(".module-poster-item, .module-card-item").each((_, element) => {
     const $el = $(element);
-    const $link = $el.find("a").first();
+    const $link = $el.is("a") ? $el : $el.find("a").first();
+    const href = normalizeVodId($link.attr("href"));
+    const name = ($el.attr("title") || $link.attr("title") || $el.find(".module-poster-item-title").first().text() ||
+      $el.find(".module-card-item-title strong").first().text() || $link.find("strong").first().text()).trim();
+    const pic = normalizePicUrl($el.find("img[data-original]").first().attr("data-original") || $el.find("img").first().attr("src"));
+    const remark = $el.find(".module-item-note").first().text().trim() ||
+      ($el.find(".module-info-item-content").first().text().trim() ? $el.find(".module-info-item-content").first().text().trim().split("/")[0].trim() : "");
 
-    const name = $link.attr("title") || "";
-    const href = $link.attr("href") || "";
-    const pic = $el.find(".large").attr("data-src") || "";
-    const remark = $el.find(".small-text").text().trim() || "";
-
-    if (name && href) {
+    if (name && href && !seen.has(href)) {
+      seen.add(href);
       list.push({
         vod_id: href,
         vod_name: name,
-        vod_pic: toAbsUrl(pic),
+        vod_pic: pic,
         vod_remarks: remark,
       });
     }
@@ -101,42 +115,50 @@ function parseCardList(html) {
   return list;
 }
 
-function convertToPlaySources(vodPlayFrom, vodPlayUrl, vodName = "", videoId = "") {
-  const playSources = [];
-  const froms = String(vodPlayFrom || "").split("$$$");
-  const urls = String(vodPlayUrl || "").split("$$$");
+function parsePageCount($, fallbackPage = 1) {
+  const pages = [fallbackPage];
+  $(".page-number").each((_, element) => {
+    const page = parseInt($(element).text().trim(), 10);
+    if (page > 0) pages.push(page);
+  });
+  const tail = $(".page-next[title='尾页']").attr("href") || "";
+  const tailMatch = tail.match(/(?:page\/|-)(\d+)(?:\.html)?(?:---\d+)?\.html?$/);
+  if (tailMatch) pages.push(parseInt(tailMatch[1], 10));
+  return Math.max(...pages);
+}
 
-  for (let i = 0; i < froms.length; i++) {
-    const sourceName = froms[i] || `线路${i + 1}`;
-    const sourceItems = urls[i] ? urls[i].split("#") : [];
+function convertToPlaySources($, vodName = "", videoId = "") {
+  const sourceNames = $(".module-tab-items .module-tab-item")
+    .map((_, element) => ($(element).attr("data-dropdown-value") || $(element).text().trim() || `线路${_ + 1}`).trim())
+    .get();
 
-    const episodes = sourceItems
-      .map((item, index) => {
-        const parts = item.split("$");
-        const epName = parts[0] || `第${index + 1}集`;
-        const epId = parts[1] || "";
-        if (!epId) return null;
+  const sourcePanels = $(".module-list.sort-list.tab-list").toArray();
 
-        const fid = `${videoId}#${i}#${index}`;
-        const playData = { id: epId, v: vodName, e: epName, sid: String(videoId || ""), fid };
-        return {
-          name: epName,
-          playId: e64(JSON.stringify(playData)),
-          _fid: fid,
-          _rawName: epName,
-        };
-      })
-      .filter(Boolean);
+  return sourcePanels
+    .map((panel, sourceIndex) => {
+      const sourceName = sourceNames[sourceIndex] || `线路${sourceIndex + 1}`;
+      const episodes = $(panel).find("a.module-play-list-link").toArray()
+        .map((element, episodeIndex) => {
+          const $link = $(element);
+          const href = $link.attr("href") || "";
+          if (!href) return null;
+          const epName = ($link.attr("title") || $link.text() || `第${episodeIndex + 1}集`)
+            .replace(/^播放/, "")
+            .trim();
+          const fid = `${videoId}#${sourceIndex}#${episodeIndex}`;
+          const playData = { id: href, v: vodName, e: epName, sid: String(videoId || ""), fid };
+          return {
+            name: epName,
+            playId: `${href}|||${e64(JSON.stringify(playData))}`,
+            _fid: fid,
+            _rawName: epName,
+          };
+        })
+        .filter(Boolean);
 
-    if (episodes.length > 0) {
-      playSources.push({
-        name: sourceName,
-        episodes,
-      });
-    }
-  }
-
-  return playSources;
+      return episodes.length ? { name: sourceName, episodes } : null;
+    })
+    .filter(Boolean);
 }
 
 function preprocessTitle(title) {
@@ -286,20 +308,33 @@ async function getCategoryList(type, page = 1) {
   try {
     const tid = type || "1";
     const pg = page || 1;
-    const url = `${HOST}/type/${tid}-${pg}.html`;
+    const url = `${HOST}/vodshow/${tid}--------${pg}---1.html`;
+    const fallbackUrl = pg === 1 ? `${HOST}/vodtype/${tid}.html` : url;
 
     logInfo("获取分类列表", { type: tid, page: pg, url });
-    const response = await axiosInstance.get(url, { headers: DEFAULT_HEADERS });
-    const list = parseCardList(response.data);
-    logInfo("分类列表获取成功", { count: list.length, page: pg });
+    let response;
+    try {
+      response = await axiosInstance.get(url, { headers: DEFAULT_HEADERS });
+    } catch (error) {
+      if (pg === 1) {
+        logInfo("分类分页请求失败，尝试备用页", fallbackUrl);
+        response = await axiosInstance.get(fallbackUrl, { headers: DEFAULT_HEADERS });
+      } else {
+        throw error;
+      }
+    }
 
-    // 正向优化：动态计算分类页的分页，防止滑到底部后无限加载空白页
+    const $ = cheerio.load(response.data || "");
+    const list = parseCardList(response.data);
+    const pagecount = parsePageCount($, pg);
+    logInfo("分类列表获取成功", { count: list.length, page: pg, pagecount });
+
     return {
       list,
       page: parseInt(pg, 10),
-      pagecount: list.length > 0 ? parseInt(pg, 10) + 1 : parseInt(pg, 10),
+      pagecount,
       limit: PAGE_LIMIT,
-      total: list.length > 0 ? 999 * PAGE_LIMIT : 0,
+      total: pagecount * PAGE_LIMIT,
     };
   } catch (error) {
     logError("获取分类失败", error);
@@ -315,33 +350,28 @@ async function getDetailById(id) {
     const $ = cheerio.load(response.data || "");
 
     const vodName = $("h1").first().text().trim();
-    const vodPic = toAbsUrl($("img").first().attr("src") || "");
-    const vodType = $(".scroll.no-margin a").eq(0).text().trim();
-    const vodActor = $(".scroll.no-margin a").eq(1).text().trim();
-    const vodDirector = $(".no-space.no-margin.m.l").text().trim();
-    const vodArea = $(".no-margin.m.l").text().trim();
-    const vodContent = $(".responsive p").last().text().trim();
+    const vodPic = normalizePicUrl($(".module-info-poster img[data-original]").first().attr("data-original") ||
+      $(".module-info-poster img").first().attr("src") || $("img").first().attr("src"));
 
-    const playFromList = [];
-    const playUrlList = [];
-
-    $(".tabs.left-align a").each((index, element) => {
-      const tabName = $(element).text().trim() || `线路${index + 1}`;
-      playFromList.push(tabName);
-
-      const episodes = [];
-      $(`.playno:eq(${index}) a`).each((_, ep) => {
-        const epName = $(ep).text().trim();
-        const epUrl = $(ep).attr("href") || "";
-        if (epName && epUrl) {
-          episodes.push(`${epName}$${epUrl}`);
-        }
-      });
-      playUrlList.push(episodes.join("#"));
-    });
+    const metadataTitles = $(".module-info-item-title").map((_, element) => $(element).text().trim()).get();
+    const metadataContents = $(".module-info-item-content").map((_, element) => $(element).text().trim()).get();
+    const findMeta = (...names) => {
+      for (const name of names) {
+        const index = metadataTitles.findIndex((title) => title.startsWith(name));
+        if (index >= 0 && metadataContents[index]) return metadataContents[index];
+      }
+      return "";
+    };
+    const vodDirector = findMeta("导演", "導演");
+    const vodActor = findMeta("主演", "主演");
+    const vodArea = findMeta("地区", "地區");
+    const vodRemarks = findMeta("备注", "備註");
+    const vodYear = ($(".module-info-tag-link a").first().attr("title") || "").trim();
+    const vodTypeName = $(".module-info-tag-link a").map((_, element) => $(element).text().trim()).get().filter(Boolean).slice(2).join(",");
+    const vodContent = $(".module-info-introduction-content").last().text().trim();
 
     const videoIdForScrape = String(id || "");
-    const playSources = convertToPlaySources(playFromList.join("$$$"), playUrlList.join("$$$"), vodName, videoIdForScrape);
+    const playSources = convertToPlaySources($, vodName, videoIdForScrape);
 
     let scrapeData = null;
     let videoMappings = [];
@@ -362,7 +392,8 @@ async function getDetailById(id) {
 
     if (scrapeCandidates.length > 0) {
       try {
-        await OmniBox.processScraping(videoIdForScrape, vodName || "", vodName || "", scrapeCandidates);
+        const scrapingResult = await OmniBox.processScraping(videoIdForScrape, vodName || "", vodName || "", scrapeCandidates);
+        logInfo("刮削处理完成", { count: scrapeCandidates.length, result: JSON.stringify(scrapingResult || {}).slice(0, 120) });
         const metadata = await OmniBox.getScrapeMetadata(videoIdForScrape);
         scrapeData = metadata?.scrapeData || null;
         videoMappings = metadata?.videoMappings || [];
@@ -411,7 +442,10 @@ async function getDetailById(id) {
       vod_id: id,
       vod_name: scrapeData?.title || vodName,
       vod_pic: scrapeData?.posterPath ? `https://image.tmdb.org/t/p/w500${scrapeData.posterPath}` : vodPic,
-      vod_type: vodType,
+      vod_type: vodTypeName || findMeta("类型", "類型"),
+      vod_year: vodYear,
+      vod_remarks: vodRemarks,
+      vod_area: vodArea,
       vod_actor:
         (scrapeData?.credits?.cast || []).slice(0, 5).map((c) => c?.name).filter(Boolean).join(",") || vodActor,
       vod_director:
@@ -421,7 +455,6 @@ async function getDetailById(id) {
           .map((c) => c?.name)
           .filter(Boolean)
           .join(",") || vodDirector,
-      vod_area: vodArea,
       vod_content: scrapeData?.overview || vodContent,
       vod_play_sources: normalizedPlaySources,
     };
@@ -436,17 +469,17 @@ async function getPlay(playId, vodName = "", episodeName = "", vodId = "") {
     let realPlayId = playId;
     let playMeta = {};
     let scrapedDanmuFileName = "";
-    
-    try {
-      const decoded = d64(playId);
-      if (decoded && decoded.startsWith("{")) {
-        const parsed = JSON.parse(decoded);
-        playMeta = parsed || {};
-        realPlayId = parsed.id || playId;
-        vodName = parsed.v || vodName;
-        episodeName = parsed.e || episodeName;
+
+    if (typeof playId === "string" && playId.includes("|||")) {
+      const [rawPlayId, metaB64] = playId.split("|||");
+      realPlayId = rawPlayId || playId;
+      const passedMeta = decodeMeta(metaB64 || "");
+      if (passedMeta && typeof passedMeta === "object") {
+        playMeta = { ...passedMeta, ...playMeta };
+        vodName = passedMeta.v || vodName;
+        episodeName = passedMeta.e || episodeName;
       }
-    } catch {}
+    }
 
     try {
       const sourceVideoId = String(vodId || playMeta.sid || "");
@@ -471,68 +504,75 @@ async function getPlay(playId, vodName = "", episodeName = "", vodId = "") {
     const response = await axiosInstance.get(playPageUrl, { headers: DEFAULT_HEADERS });
     const html = String(response.data || "");
 
+    let directVideoUrl = "";
+
     try {
-      const json = JSON.parse(html);
-      if (json && Number(json.code) === 200 && json.url) {
-        let videoUrl = String(json.url);
+      const playerMatch = html.match(/var\s+player_data\s*=\s*(\{[\s\S]*?\})\s*<\/script>/i) ||
+        html.match(/player_\w+\s*=\s*(\{[\s\S]*?\})\s*[;,]/i);
+      if (playerMatch && playerMatch[1]) {
+        const conf = JSON.parse(playerMatch[1].replace(/'/g, '"'));
+        let videoUrl = conf.url || "";
+
+        if (String(conf.encrypt) === "1") {
+          videoUrl = decodeURIComponent(videoUrl);
+        } else if (String(conf.encrypt) === "2") {
+          try {
+            videoUrl = decodeURIComponent(Buffer.from(videoUrl, "base64").toString("utf8"));
+          } catch {
+            try {
+              videoUrl = Buffer.from(decodeURIComponent(videoUrl), "base64").toString("utf8");
+            } catch {
+              videoUrl = Buffer.from(videoUrl, "base64").toString("utf8");
+            }
+          }
+        }
 
         if (videoUrl.startsWith("rose_")) {
-          const base64Part = videoUrl.substring(5);
           try {
-            videoUrl = Buffer.from(decodeURIComponent(base64Part), "base64").toString();
+            videoUrl = Buffer.from(decodeURIComponent(videoUrl.substring(5)), "base64").toString("utf8");
           } catch {
-            try { videoUrl = Buffer.from(base64Part, "base64").toString(); } catch {}
+            videoUrl = Buffer.from(videoUrl.substring(5), "base64").toString("utf8");
           }
-        } else if (videoUrl.startsWith("/")) {
+        }
+
+        if (videoUrl && !/^https?:\/\//i.test(videoUrl) && videoUrl.startsWith("/")) {
           videoUrl = toAbsUrl(videoUrl);
         }
 
-        const playResponse = {
-          urls: [{ name: "播放", url: videoUrl }],
-          parse: 0,
-          header: DEFAULT_HEADERS,
-        };
-
-        if (DANMU_API && vodName) {
-          const fileName = scrapedDanmuFileName || buildFileNameForDanmu(vodName, episodeName);
-          if (fileName) {
-            const danmakuList = await matchDanmu(fileName);
-            if (danmakuList.length > 0) playResponse.danmaku = danmakuList;
-          }
-        }
-        return playResponse;
-      }
-    } catch {}
-
-    try {
-      const match = html.match(/player_.*?=(\{[\s\S]*?\})/);
-      if (match && match[1]) {
-        const conf = JSON.parse(match[1].replace(/'/g, '"'));
-        let videoUrl = conf.url || "";
-        
-        if (String(conf.encrypt) === "1") videoUrl = decodeURIComponent(videoUrl);
-        if (String(conf.encrypt) === "2") videoUrl = Buffer.from(decodeURIComponent(videoUrl), "base64").toString();
-
-        if (videoUrl && videoUrl.match(/\.(m3u8|mp4|flv|avi|mkv|ts)/i)) {
-          const playResponse = {
-            urls: [{ name: "播放", url: videoUrl }],
-            parse: 0,
-            header: DEFAULT_HEADERS,
-          };
-
-          if (DANMU_API && vodName) {
-            const fileName = scrapedDanmuFileName || buildFileNameForDanmu(vodName, episodeName);
-            if (fileName) {
-              const danmakuList = await matchDanmu(fileName);
-              if (danmakuList.length > 0) playResponse.danmaku = danmakuList;
-            }
-          }
-          return playResponse;
+        if (videoUrl && (/^https?:\/\//i.test(videoUrl) || videoUrl.match(/\.(m3u8|mp4|flv|avi|mkv|ts)(?:$|\?)/i))) {
+          directVideoUrl = videoUrl;
         } else if (videoUrl) {
-          playPageUrl = videoUrl;
+          logInfo("播放配置未得到直链", videoUrl.slice(0, 160));
         }
       }
-    } catch (error) {}
+    } catch (error) {
+      logInfo("解析播放配置失败", error?.message || error);
+    }
+
+    if (!directVideoUrl) {
+      const linkMatch = html.match(/(?:data-src|data-url|src)\s*=\s*["']([^"']*\.(?:m3u8|mp4|flv|avi|mkv|ts)[^"']*)["']/i);
+      if (linkMatch) directVideoUrl = linkMatch[1].startsWith("/") ? toAbsUrl(linkMatch[1]) : linkMatch[1];
+    }
+
+    if (directVideoUrl) {
+      const playResponse = {
+        urls: [{ name: "播放", url: directVideoUrl }],
+        parse: 0,
+        header: {
+          ...DEFAULT_HEADERS,
+          Referer: `${HOST}/`,
+        },
+      };
+
+      if (DANMU_API && vodName) {
+        const fileName = scrapedDanmuFileName || buildFileNameForDanmu(vodName, episodeName);
+        if (fileName) {
+          const danmakuList = await matchDanmu(fileName);
+          if (danmakuList.length > 0) playResponse.danmaku = danmakuList;
+        }
+      }
+      return playResponse;
+    }
 
     const sniffResult = await sniffLetuPlay(playPageUrl);
     if (sniffResult) return sniffResult;
@@ -540,16 +580,17 @@ async function getPlay(playId, vodName = "", episodeName = "", vodId = "") {
     return {
       urls: [{ name: "解析", url: playPageUrl }],
       parse: 1,
-      header: DEFAULT_HEADERS,
+      header: { ...DEFAULT_HEADERS, Referer: `${HOST}/` },
     };
   } catch (error) {
-    const sniffResult = await sniffLetuPlay(toAbsUrl(playId));
+    const fallbackPlayUrl = toAbsUrl(playId.split("|||")[0]);
+    const sniffResult = await sniffLetuPlay(fallbackPlayUrl);
     if (sniffResult) return sniffResult;
-    
+
     return {
-      urls: [{ name: "解析", url: toAbsUrl(playId) }],
+      urls: [{ name: "解析", url: fallbackPlayUrl }],
       parse: 1,
-      header: DEFAULT_HEADERS,
+      header: { ...DEFAULT_HEADERS, Referer: `${HOST}/` },
     };
   }
 }
@@ -560,9 +601,11 @@ async function getSearch(keyword, page = 1) {
     const pg = page || 1;
     const wd = encodeURIComponent(String(keyword || "").trim());
     
-    // 修复1：使用抓包得到的真实伪静态 URL (带 .html)
-    const url = `${HOST}/vodsearch/${wd}----------${pg}---.html`;
-    const backupUrl = `${HOST}/vodsearch/-------------.html?wd=${wd}`;
+    // 新站表单为 /vodsearch.html?wd=...，查询式结果更精确
+    const url = pg > 1
+      ? `${HOST}/vodsearch/page/${pg}.html?wd=${wd}`
+      : `${HOST}/vodsearch.html?wd=${wd}`;
+    const backupUrl = `${HOST}/vodsearch/${wd}----------${pg}---.html`;
 
     logInfo("执行搜索", { keyword, page: pg, url });
 
@@ -570,44 +613,23 @@ async function getSearch(keyword, page = 1) {
     try {
       response = await axiosInstance.get(url, { headers: DEFAULT_HEADERS });
     } catch (e) {
-      logInfo("伪静态搜索失败，尝试 Query 形式", backupUrl);
+      logInfo("Query 搜索失败，尝试伪静态形式", backupUrl);
       response = await axiosInstance.get(backupUrl, { headers: DEFAULT_HEADERS });
     }
 
     const html = response.data;
     const $ = cheerio.load(html);
-    let list = [];
+    const list = parseCardList(html);
+    const pagecount = parsePageCount($, pg);
 
-    // 修复2：根据真实的 DOM 结构解析纯文本列表
-    $(".result-list .result-item").each((_, element) => {
-      const $a = $(element).find("a").first();
-      const name = $a.text().trim();
-      const href = $a.attr("href");
+    logInfo("搜索完成", { keyword, count: list.length, page: pg, pagecount });
 
-      if (name && href) {
-        list.push({
-          vod_id: href,
-          vod_name: name,
-          vod_pic: "https://youke2.picui.cn/s1/2025/12/21/694796745c0c6.png", // 搜索页无图，使用默认占位图
-          vod_remarks: "",
-        });
-      }
-    });
-
-    // 兜底：如果上面的没解析到，尝试原有的网格布局
-    if (list.length === 0) {
-      list = parseCardList(html);
-    }
-
-    logInfo("搜索完成", { keyword, count: list.length, page: pg });
-
-    // 修复3：动态计算分页，避免无限加载空白页
     return {
       list,
       page: parseInt(pg, 10),
-      pagecount: list.length > 0 ? parseInt(pg, 10) + 1 : parseInt(pg, 10),
+      pagecount,
       limit: PAGE_LIMIT,
-      total: list.length > 0 ? 999 * PAGE_LIMIT : 0,
+      total: pagecount * PAGE_LIMIT,
     };
   } catch (error) {
     logError("搜索失败", error);
@@ -678,6 +700,7 @@ module.exports = {
   search,
   play,
 };
+
 
 const runner = require("spider_runner");
 runner.run(module.exports);

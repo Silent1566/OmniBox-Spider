@@ -1,15 +1,15 @@
 // @name 袋鼠影视
 // @author 梦
-// @description 影视站：https://daishuys.com ，支持首页、分类、详情、搜索与播放
+// @description 影视站：https://dsystv.com ，支持首页、分类、详情、搜索与播放
 // @dependencies cheerio
-// @version 1.0.0
+// @version 1.0.1
 // @downloadURL https://gh-proxy.org/https://github.com/Silent1566/OmniBox-Spider/raw/refs/heads/main/影视/采集/袋鼠影视.js
 
 const OmniBox = require("omnibox_sdk");
 const runner = require("spider_runner");
 const cheerio = require("cheerio");
 
-const BASE_URL = "https://daishuys.com";
+const BASE_URL = "https://dsystv.com";
 const UA = "Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1";
 const LIST_CACHE_TTL = Number(process.env.DAISHU_LIST_CACHE_TTL || 900);
 const DETAIL_CACHE_TTL = Number(process.env.DAISHU_DETAIL_CACHE_TTL || 1800);
@@ -53,7 +53,7 @@ const FILTER_DEF = {
 module.exports = { home, category, detail, search, play };
 runner.run(module.exports);
 
-async function requestText(url, options = {}) {
+async function requestText(url, options = {}, redirectCount = 0) {
   await OmniBox.log("info", `[袋鼠影视][request] ${options.method || "GET"} ${url}`);
   const res = await OmniBox.request(url, {
     method: options.method || "GET",
@@ -67,6 +67,14 @@ async function requestText(url, options = {}) {
     timeout: options.timeout || 20000,
   });
   const statusCode = Number(res?.statusCode || 0);
+  if ([301, 302, 303, 307, 308].includes(statusCode) && redirectCount < 5) {
+    const location = res?.headers?.location || res?.headers?.Location || res?.headers?.LOCATION;
+    if (location) {
+      const nextUrl = absoluteUrl(location);
+      await OmniBox.log("info", `[袋鼠影视][redirect] ${url} -> ${nextUrl}`);
+      return requestText(nextUrl, options, redirectCount + 1);
+    }
+  }
   if (!res || statusCode !== 200) {
     throw new Error(`HTTP ${statusCode || "unknown"} @ ${url}`);
   }
@@ -203,7 +211,7 @@ function parseDetail(htmlText, detailUrl) {
   const lang = $(".hy-video-details li").filter((_, el) => normalizeText($(el).text()).startsWith("语言：")).first();
   const alias = $(".hy-video-details li").filter((_, el) => normalizeText($(el).text()).startsWith("又名：")).first();
   const douban = $(".hy-video-details li").filter((_, el) => normalizeText($(el).text()).startsWith("豆瓣：")).first();
-  const content = normalizeText($("#list3 .plot").html() || $(".plot").html() || "");
+  const content = normalizeText($(".video-plot[data-video-plot]").html() || $("#list3 .plot").html() || $(".plot").html() || "");
 
   const playSources = [];
   $("#playlist .panel").each((_, panel) => {
@@ -268,7 +276,7 @@ async function category(params, context) {
     const page = Math.max(1, Number(params.page || 1));
     const filters = params.extend || params.filters || params.ext || {};
     const url = buildCategoryUrl(categoryId, page, filters);
-    const html = await getCachedText(`daishu:category:${categoryId}:${page}:${JSON.stringify(filters)}`, LIST_CACHE_TTL, async () => requestText(url));
+    const html = await getCachedText(`daishu:category:${url}`, LIST_CACHE_TTL, async () => requestText(url));
     const parsed = parseCategoryList(html);
     const pagecount = parsed.pagecount || (parsed.list.length >= 20 ? page + 1 : page);
     return {
@@ -311,7 +319,7 @@ async function search(params, context) {
       referer: `${BASE_URL}/search.php`,
     }));
     const parsed = parseSearchList(html);
-    const totalMatch = html.match(/相关的.?“(\d+)”.?条结果/);
+    const totalMatch = html.match(/相关的.{0,40}“(\d+)”.{0,20}条结果/);
     const total = totalMatch ? Number(totalMatch[1] || 0) : parsed.list.length;
     return {
       page,

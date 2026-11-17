@@ -1,5 +1,5 @@
 // @name HDmoli
-// @version 1.0.7
+// @version 1.0.8
 // @downloadURL https://gh-proxy.org/https://github.com/Silent1566/OmniBox-Spider/raw/refs/heads/main/影视/采集/HDmoli.js
 // @dependencies cheerio
 
@@ -7,7 +7,7 @@ const OmniBox = require("omnibox_sdk");
 const runner = require("spider_runner");
 const cheerio = require("cheerio");
 
-const BASE_URL = (process.env.HDMOLI_HOST || "https://www.hdmoli.org").replace(/\/$/, "");
+const BASE_URL = (process.env.HDMOLI_HOST || "https://www.hdmoli.me").replace(/\/$/, "");
 const USER_AGENT = process.env.HDMOLI_UA || "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/136.0.0.0 Safari/537.36";
 const REQUEST_TIMEOUT = Number(process.env.HDMOLI_TIMEOUT || 20000);
 
@@ -29,7 +29,7 @@ const CLASS_LIST = [
 module.exports = { home, category, detail, search, play };
 runner.run(module.exports);
 
-async function request(url, extra = {}) {
+async function request(url, extra = {}, redirectCount = 0) {
   const finalUrl = url.startsWith("http") ? url : `${BASE_URL}${url}`;
   const headers = {
     "User-Agent": USER_AGENT,
@@ -44,9 +44,18 @@ async function request(url, extra = {}) {
     timeout: REQUEST_TIMEOUT,
   });
 
-  if (res.statusCode !== 200) {
-    throw new Error(`HTTP ${res.statusCode} @ ${finalUrl}`);
+  const statusCode = Number(res.statusCode || 0);
+  const responseHeaders = res.headers || {};
+  const location = responseHeaders.location || responseHeaders.Location || responseHeaders["LOCATION"] || "";
+  if ([301, 302, 303, 307, 308].includes(statusCode)) {
+    if (redirectCount >= 5) throw new Error(`重定向次数过多 @ ${finalUrl}`);
+    if (!location) throw new Error(`HTTP ${statusCode} 未返回 Location @ ${finalUrl}`);
+    const nextUrl = absoluteUrl(location, finalUrl);
+    await OmniBox.log("info", `[redirect] ${finalUrl} -> ${nextUrl}`);
+    return request(nextUrl, extra, redirectCount + 1);
   }
+
+  if (statusCode !== 200) throw new Error(`HTTP ${statusCode} @ ${finalUrl}`);
 
   return res.body || "";
 }
@@ -65,11 +74,16 @@ function normalizeText(text) {
   return String(text || "").replace(/\s+/g, " ").trim();
 }
 
-function absoluteUrl(url) {
+function absoluteUrl(url, currentUrl = BASE_URL) {
   if (!url) return "";
-  if (/^https?:\/\//i.test(url)) return url;
-  if (url.startsWith("//")) return `https:${url}`;
-  return `${BASE_URL}${url.startsWith("/") ? "" : "/"}${url}`;
+  const value = String(url).trim();
+  if (/^https?:\/\//i.test(value)) return value;
+  if (value.startsWith("//")) return `https:${value}`;
+  try {
+    return new URL(value, currentUrl).toString();
+  } catch {
+    return `${BASE_URL}${value.startsWith("/") ? "" : "/"}${value}`;
+  }
 }
 
 function extractIdFromPath(path) {
@@ -94,11 +108,24 @@ function mapListItem($, el) {
   const linkEl = box.find("a.myui-vodlist__thumb").first();
   const titleEl = box.find("h4.title a").first();
   const href = linkEl.attr("href") || titleEl.attr("href") || "";
-  const pic = linkEl.find("img").attr("data-original") || linkEl.find("img").attr("src") || "";
+  const pic = linkEl.attr("data-original") || linkEl.find("img").attr("data-original") || linkEl.attr("src") || linkEl.find("img").attr("src") || "";
   const remarks = normalizeText(linkEl.find(".pic-text").first().text() || box.find(".pic-text").first().text());
   const score = normalizeText(linkEl.find(".pic-tag-right").first().text());
   const meta = normalizeText(box.find("p.text").first().text());
-  const parts = meta.split("/").map(s => normalizeText(s)).filter(Boolean);
+  const looksLikeMetadata = /^[0-9]{4}\s*\//.test(meta);
+  let parts = looksLikeMetadata ? meta.split("/").map(s => normalizeText(s)).filter(Boolean) : [];
+
+  if (!parts.length) {
+    const info = normalizeText(box.find("p").filter((_, p) => $(p).text().includes("分类：")).first().text());
+    const typeMatch = info.match(/分类：([^地]*?)地区：/);
+    const areaMatch = info.match(/地区：([^年]*?)年份：/);
+    const yearMatch = info.match(/年份：([0-9]{4})/);
+    parts = [
+      yearMatch ? yearMatch[1] : "",
+      areaMatch ? areaMatch[1].trim() : "",
+      typeMatch ? typeMatch[1].trim() : "",
+    ].filter(Boolean);
+  }
 
   return {
     vod_id: extractIdFromPath(href),
@@ -116,7 +143,7 @@ function parseListPage(html) {
   const $ = cheerio.load(html, { decodeEntities: false });
   const list = [];
   // 针对该站点的 col- 布局和 myui-vodlist 混合结构进行匹配
-  $("ul.myui-vodlist li, ul.myui-vodlist__bd li, #searchList li, li[class*='col-']").each((_, el) => {
+  $("ul.myui-vodlist li, ul.myui-vodlist__bd li, #searchList li, li[class*='col-'], li.clearfix").each((_, el) => {
     const box = $(el);
     // 必须包含链接和标题，且不是广告或菜单项
     if (box.find("a[href*='/movie/index']").length > 0 || box.find("a[href*='/juji/index']").length > 0) {

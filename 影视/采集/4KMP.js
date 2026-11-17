@@ -1,15 +1,15 @@
 // @name 4KMP
 // @author 梦
-// @description 4kmp.com：支持首页、分类、搜索、详情与直链播放，站点请求使用苹果 Safari UA
+// @description 4k-av.com：支持首页、分类、搜索、详情与直链播放，站点请求使用苹果 Safari UA
 // @dependencies cheerio
-// @version 1.0.1
+// @version 1.0.2
 // @downloadURL https://gh-proxy.org/https://github.com/Silent1566/OmniBox-Spider/raw/refs/heads/main/影视/采集/4KMP.js
 
 const OmniBox = require("omnibox_sdk");
 const runner = require("spider_runner");
 const cheerio = require("cheerio");
 
-const BASE_URL = "https://4kmp.com";
+const BASE_URL = "https://4k-av.com";
 const UA = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.6 Safari/605.1.15";
 const REQUEST_TIMEOUT = Number(process.env.KMP_TIMEOUT || 20000);
 
@@ -113,18 +113,23 @@ function buildPlayHeaders(referer = `${BASE_URL}/`) {
 
 async function fetchText(url, options = {}) {
   const finalUrl = absUrl(url);
-  await OmniBox.log("info", `[4KMP][request] ${finalUrl}`);
-  const res = await OmniBox.request(finalUrl, {
-    method: options.method || "GET",
-    headers: buildHeaders(options.referer, options.headers || {}),
-    body: options.body,
-    timeout: options.timeout || REQUEST_TIMEOUT,
-  });
-  const statusCode = Number(res?.statusCode || 0);
-  if (!res || statusCode !== 200) {
-    throw new Error(`HTTP ${res?.statusCode || "unknown"} @ ${finalUrl}`);
+  let lastError = "";
+  for (let attempt = 0; attempt < 3; attempt += 1) {
+    if (attempt > 0) await new Promise((resolve) => setTimeout(resolve, 500 * attempt));
+    await OmniBox.log("info", `[4KMP][request] ${finalUrl}`);
+    const res = await OmniBox.request(finalUrl, {
+      method: options.method || "GET",
+      headers: buildHeaders(options.referer, options.headers || {}),
+      body: options.body,
+      timeout: options.timeout || REQUEST_TIMEOUT,
+    });
+    const statusCode = Number(res?.statusCode || 0);
+    if (res && statusCode === 200) return getBodyText(res);
+
+    lastError = String(res?.statusCode || "unknown");
+    await OmniBox.log("warn", `[4KMP][request] attempt ${attempt + 1} HTTP ${lastError} @ ${finalUrl}`);
   }
-  return getBodyText(res);
+  throw new Error(`HTTP ${lastError} @ ${finalUrl}`);
 }
 
 function dedupeById(list) {
@@ -146,7 +151,7 @@ function detectTypeId(href) {
 
 function pickLabels($, $box) {
   const map = {};
-  $box.find(".resyear label, #MainContent_videodetail label").each((_, el) => {
+  $box.find(".resyear label, #MainContent_videodetail label, #MainContent_videodetail span").each((_, el) => {
     const $el = $(el);
     const title = cleanText($el.attr("title") || "");
     const text = cleanText($el.text());
@@ -254,7 +259,7 @@ function buildCategoryBasePath(typeId, extend = {}) {
 
 function buildPagedPath(basePath, sourcePage, pageCount) {
   const path = basePath.endsWith("/") ? basePath : `${basePath}/`;
-  if (!sourcePage || sourcePage >= pageCount) return path;
+  if (!sourcePage || sourcePage <= 1) return path;
   return `${path}page-${sourcePage}.html`;
 }
 
@@ -439,7 +444,7 @@ async function category(params, context) {
     return {
       page,
       pagecount: pageCount,
-      total: pageCount * Math.max(list.length, 30),
+      total: pageCount * Math.max(list.length, 24),
       list,
     };
   } catch (error) {
@@ -468,7 +473,7 @@ async function search(params, context) {
   try {
     const keyword = String(params?.keyword || params?.key || params?.wd || "").trim();
     if (!keyword) return { page, pagecount: 0, total: 0, list: [] };
-    const url = `${BASE_URL}/s?k=${encodeURIComponent(keyword)}`;
+    const url = `${BASE_URL}/s?y=${encodeURIComponent(keyword)}`;
     const html = await fetchText(url);
     const list = refineSearchResults(parseVodList(html), keyword);
     await OmniBox.log("info", `[4KMP][search] keyword=${keyword} list=${list.length}`);

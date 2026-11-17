@@ -1,10 +1,27 @@
 // @name 枝枝影视
-// @description 页面解析：https://zzoc.cc，支持首页、筛选分类、搜索、详情、多线路播放和嗅探兜底
-// @version 1.0.0
+// @description 页面解析：https://zzoc.cc，支持CF处理、首页、筛选分类、搜索、详情、多线路播放和嗅探兜底；依赖 axios
+// @version 1.1.1
 // @downloadURL https://gh-proxy.org/https://github.com/Silent1566/OmniBox-Spider/raw/refs/heads/main/影视/采集/枝枝影视.js
 
 const OmniBox = require("omnibox_sdk");
 const runner = require("spider_runner");
+const axios = require("axios");
+// ==================== CF 盾绕过配置 ====================
+// 项目地址：https://github.com/FlareSolverr/FlareSolverr
+// 优先读取站点专用变量，其次回退通用 FLARESOLVERR_URL；设置 ZHIZHI_CF_AUTO=0 可关闭自动处理。
+const ZHIZHI_CF_COOKIE = process.env.ZHIZHI_CF_COOKIE || process.env.ZHIZHI_COOKIE || "";
+const ZHIZHI_CF_AUTO = process.env.ZHIZHI_CF_AUTO !== "0";
+const ZHIZHI_CF_CACHE_KEY = process.env.ZHIZHI_CF_CACHE_KEY || "zhizhi:cf_clearance";
+const ZHIZHI_CF_MAX_AGE_SECONDS = parseInt(process.env.ZHIZHI_CF_MAX_AGE_SECONDS || "21600", 10) || 21600;
+const ZHIZHI_CF_TIMEOUT_MS = parseInt(process.env.ZHIZHI_CF_TIMEOUT_MS || "45000", 10) || 45000;
+const ZHIZHI_FLARESOLVERR_URL = process.env.ZHIZHI_FLARESOLVERR_URL || process.env.FLARESOLVERR_URL || "http://192.168.50.50:8191/v1";
+const ZHIZHI_FLARESOLVERR_SESSION = process.env.ZHIZHI_FLARESOLVERR_SESSION || "";
+const ZHIZHI_FLARESOLVERR_TIMEOUT_MS = parseInt(process.env.ZHIZHI_FLARESOLVERR_TIMEOUT_MS || String(ZHIZHI_CF_TIMEOUT_MS), 10) || ZHIZHI_CF_TIMEOUT_MS;
+const ZHIZHI_CHROMIUM_BIN = process.env.ZHIZHI_CHROMIUM_BIN || "";
+const ZHIZHI_BROWSER_DEBUGGING = process.env.ZHIZHI_BROWSER_DEBUGGING === "1";
+let ZHIZHI_BROWSER_UA = text(process.env.ZHIZHI_BROWSER_UA || "");
+const { promisify } = require("util");
+const execFileAsync = promisify(require("child_process").execFile);
 
 const HOST = String(process.env.ZHIZHI_HOST || "https://zzoc.cc").replace(/\/+$/, "");
 const UA = "Mozilla/5.0 (Linux; Android 13) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0 Mobile Safari/537.36";
@@ -12,6 +29,11 @@ const HEADERS = {
   "User-Agent": UA,
   Referer: `${HOST}/`,
   Accept: "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+  "Accept-Language": "zh-CN,zh;q=0.9,en;q=0.8",
+  "Sec-Fetch-Dest": "document",
+  "Sec-Fetch-Mode": "navigate",
+  "Sec-Fetch-Site": "same-origin",
+  "Upgrade-Insecure-Requests": "1",
 };
 const CLASS_LIST = [
   { type_id: "1", type_name: "电影" },
@@ -46,20 +68,314 @@ function getBodyText(response) {
   return String(body || "");
 }
 
+function cookiesFromSetCookie(values) {
+  return (Array.isArray(values) ? values : [values])
+    .map((item) => String(item || "").split(";")[0])
+    .filter(Boolean);
+}
+
+function mergeCookies(current, incoming) {
+  const map = new Map();
+  const append = (value) => {
+    String(value || "").split(/;\s*/).forEach((pair) => {
+      const index = pair.indexOf("=");
+      if (index <= 0) return;
+      map.set(pair.slice(0, index).trim(), pair.slice(index + 1).trim());
+    });
+  };
+  append(current);
+  append(incoming);
+  return [...map.entries()].filter(([, value]) => value).map(([key, value]) => `${key}=${value}`).join("; ");
+}
+
+function text(value) {
+  return String(value ?? "").trim();
+}
+
+function buildCookieHeader(cookie = "") {
+  const value = text(cookie);
+  return value ? { Cookie: value } : {};
+}
+
+function cookiesArrayToString(cookies = []) {
+  return (Array.isArray(cookies) ? cookies : [])
+    .map((item) => ({ name: text(item?.name || ""), value: text(item?.value || "") }))
+    .filter((item) => item.name && item.value)
+    .map((item) => `${item.name}=${item.value}`)
+    .join("; ");
+}
+
+async function getCachedCfCookie() {
+  if (text(ZHIZHI_CF_COOKIE)) return text(ZHIZHI_CF_COOKIE);
+  try {
+    return text((await OmniBox.getCache(ZHIZHI_CF_CACHE_KEY)) || "");
+  } catch (error) {
+    OmniBox.log("warn", `[cf] 读取缓存失败: ${error.message}`);
+    return "";
+  }
+}
+
+async function setCachedCfCookie(cookie) {
+  const value = text(cookie);
+  if (!value || text(ZHIZHI_CF_COOKIE)) return;
+  try {
+    await OmniBox.setCache(ZHIZHI_CF_CACHE_KEY, value, ZHIZHI_CF_MAX_AGE_SECONDS);
+  } catch (error) {
+    OmniBox.log("warn", `[cf] 写入缓存失败: ${error.message}`);
+  }
+}
+
+async function requestWithFlareSolverr(targetUrl) {
+  const endpoint = text(ZHIZHI_FLARESOLVERR_URL);
+  if (!endpoint) throw new Error("未配置 FlareSolverr 地址");
+  const payload = {
+    cmd: "request.get",
+    url: targetUrl,
+    maxTimeout: ZHIZHI_FLARESOLVERR_TIMEOUT_MS,
+  };
+  if (text(ZHIZHI_FLARESOLVERR_SESSION)) payload.session = text(ZHIZHI_FLARESOLVERR_SESSION);
+  const res = await axios.post(endpoint, payload, {
+    timeout: ZHIZHI_FLARESOLVERR_TIMEOUT_MS + 5000,
+    headers: { "Content-Type": "application/json", "User-Agent": UA },
+    validateStatus: () => true,
+  });
+  if (res.status !== 200 || !res.data || res.data.status !== "ok") {
+    throw new Error(`FlareSolverr HTTP ${res.status}${res.data?.message ? `: ${res.data.message}` : ""}`);
+  }
+  const solution = res.data.solution || {};
+  const cookies = Array.isArray(solution.cookies) ? solution.cookies : [];
+  return {
+    cookie: cookiesArrayToString(cookies),
+    html: String(solution.response || ""),
+    statusCode: Number(solution.status || 200),
+    headers: solution.headers || {},
+    userAgent: text(solution.userAgent || ""),
+  };
+}
+
+async function fetchCfClearanceWithFlareSolverr(targetUrl = `${HOST}/`) {
+  const solved = await requestWithFlareSolverr(targetUrl);
+  if (!/cf_clearance=/.test(solved.cookie)) {
+    throw new Error("FlareSolverr 未返回 cf_clearance");
+  }
+  return solved.cookie;
+}
+
+async function fetchCfClearanceWithBrowser(targetUrl = `${HOST}/`) {
+  const script = String.raw`
+const { execFile } = require("child_process");
+const { promisify } = require("util");
+const http = require("http");
+const fs = require("fs");
+const execFileAsync = promisify(execFile);
+const BASE_URL = process.env.ZHIZHI_HOST;
+const USER_AGENT = process.env.ZHIZHI_BROWSER_USER_AGENT;
+const timeoutMs = Number(process.env.ZHIZHI_CF_TIMEOUT_MS || 45000);
+
+function delay(ms) { return new Promise((resolve) => setTimeout(resolve, ms)); }
+function getJson(url) {
+  return new Promise((resolve, reject) => {
+    http.get(url, (res) => {
+      let data = "";
+      res.on("data", (chunk) => { data += chunk; });
+      res.on("end", () => {
+        try { resolve(JSON.parse(data)); } catch (error) { reject(error); }
+      });
+    }).on("error", reject);
+  });
+}
+
+async function waitForDebugger(port, deadline) {
+  while (Date.now() < deadline) {
+    try {
+      const info = await getJson("http://127.0.0.1:" + port + "/json/version");
+      if (info && info.webSocketDebuggerUrl) return info;
+    } catch (_) {}
+    await delay(500);
+  }
+  throw new Error("等待 Chromium 调试端口超时");
+}
+
+async function waitForCfCookie(wsUrl, baseUrl, deadline) {
+  const ws = new WebSocket(wsUrl);
+  let seq = 0;
+  const pending = new Map();
+  ws.onmessage = (event) => {
+    const msg = JSON.parse(event.data);
+    if (msg.id && pending.has(msg.id)) {
+      pending.get(msg.id)(msg);
+      pending.delete(msg.id);
+    }
+  };
+  await new Promise((resolve, reject) => {
+    ws.onopen = resolve;
+    ws.onerror = reject;
+  });
+  const send = (method, params = {}) => new Promise((resolve) => {
+    const id = ++seq;
+    pending.set(id, resolve);
+    ws.send(JSON.stringify({ id, method, params }));
+  });
+  const host = new URL(baseUrl).hostname;
+  try {
+    while (Date.now() < deadline) {
+      const cookies = (await send("Storage.getCookies", {})).result?.cookies || [];
+      const hit = cookies.find((item) => item.name === "cf_clearance" && String(item.domain || "").includes(host));
+      if (hit && hit.value) return "cf_clearance=" + hit.value;
+      await delay(1200);
+    }
+    throw new Error("未在时限内获取到 cf_clearance");
+  } finally {
+    ws.close();
+  }
+}
+
+(async () => {
+  const port = 9400 + Math.floor(Math.random() * 200);
+  const profile = (await execFileAsync("mktemp", ["-d", "/tmp/zhizhi-cf-XXXXXX"])).stdout.trim();
+  const candidates = process.env.ZHIZHI_CHROMIUM_BIN
+    ? [process.env.ZHIZHI_CHROMIUM_BIN]
+    : ["/snap/bin/chromium", "/usr/bin/chromium-browser", "/usr/bin/chromium"];
+  const bin = candidates.find((item) => item && fs.existsSync(item));
+  if (!bin) throw new Error("未找到 Chromium，可设置 ZHIZHI_CHROMIUM_BIN");
+  const args = [
+    "--headless=new",
+    "--disable-gpu",
+    "--no-sandbox",
+    "--disable-dev-shm-usage",
+    "--user-data-dir=" + profile,
+    "--remote-debugging-port=" + port,
+    "--user-agent=" + USER_AGENT,
+    BASE_URL + "/"
+  ];
+  if (process.env.ZHIZHI_BROWSER_DEBUGGING === "1") args.push("--remote-allow-origins=*");
+  const child = execFile(bin, args, { stdio: "ignore" });
+  try {
+    const deadline = Date.now() + timeoutMs;
+    const version = await waitForDebugger(port, deadline);
+    process.stdout.write(await waitForCfCookie(version.webSocketDebuggerUrl, BASE_URL, deadline));
+  } finally {
+    try { child.kill("SIGKILL"); } catch (_) {}
+  }
+})().catch((error) => {
+  console.error(error && error.message ? error.message : String(error));
+  process.exit(1);
+});`;
+
+  const { stdout, stderr } = await execFileAsync(process.execPath, ["-e", script], {
+    timeout: ZHIZHI_CF_TIMEOUT_MS + 5000,
+    env: {
+      ...process.env,
+      ZHIZHI_HOST: HOST,
+      ZHIZHI_BROWSER_USER_AGENT: ZHIZHI_BROWSER_UA || UA,
+      ZHIZHI_CF_TIMEOUT_MS: String(ZHIZHI_CF_TIMEOUT_MS),
+      ZHIZHI_CHROMIUM_BIN: ZHIZHI_CHROMIUM_BIN,
+      ZHIZHI_BROWSER_DEBUGGING: ZHIZHI_BROWSER_DEBUGGING ? "1" : "0",
+    },
+    maxBuffer: 1024 * 1024,
+  });
+  const cookie = text(stdout);
+  if (!/^cf_clearance=/.test(cookie)) {
+    throw new Error(text(stderr) || "未获取到 cf_clearance");
+  }
+  return cookie;
+}
+
+async function ensureCfCookie(forceRefresh = false, targetUrl = `${HOST}/`) {
+  if (text(ZHIZHI_CF_COOKIE)) return text(ZHIZHI_CF_COOKIE);
+  if (!forceRefresh) {
+    const cached = await getCachedCfCookie();
+    if (cached) return cached;
+  }
+  if (!ZHIZHI_CF_AUTO) return "";
+  let cookie = "";
+  try {
+    OmniBox.log("info", `[cf] 开始通过 FlareSolverr 自动获取 cf_clearance`);
+    cookie = await fetchCfClearanceWithFlareSolverr(targetUrl);
+  } catch (error) {
+    OmniBox.log("warn", `[cf] FlareSolverr 获取失败，回退 headless Chromium: ${error.message}`);
+    cookie = await fetchCfClearanceWithBrowser(targetUrl);
+  }
+  if (cookie) {
+    await setCachedCfCookie(cookie);
+    OmniBox.log("info", `[cf] 已自动获取 cf_clearance，长度=${cookie.length}`);
+  }
+  return cookie;
+}
+
+function isBlockedHtml(body = "") {
+  const lower = String(body || "").toLowerCase();
+  return lower.includes("just a moment")
+    || lower.includes("cf-browser-verification")
+    || lower.includes("cf_chl_opt")
+    || lower.includes("enable javascript and cookies to continue")
+    || (lower.includes("captcha") && !lower.includes('name="cf-turnstile-response"'));
+}
+
 async function requestText(url, options = {}) {
+  const referer = options.referer || options.headers?.Referer || `${HOST}/`;
+  const cookie = await getCachedCfCookie();
+  const headers = {
+    ...HEADERS,
+    ...(options.headers || {}),
+    Referer: referer,
+    ...buildCookieHeader(cookie),
+  };
   const response = await OmniBox.request(url, {
     method: options.method || "GET",
-    headers: {
-      ...HEADERS,
-      ...(options.headers || {}),
-      Referer: options.referer || options.headers?.Referer || `${HOST}/`,
-    },
+    headers,
     timeout: options.timeout || 30000,
     body: options.body,
   });
   const statusCode = Number(response?.statusCode || 200);
-  if (statusCode < 200 || statusCode >= 400) throw new Error(`HTTP ${statusCode || "unknown"} @ ${url}`);
-  return getBodyText(response);
+  const body = getBodyText(response);
+  if (statusCode >= 200 && statusCode < 400 && body && !isBlockedHtml(body)) return body;
+  if (!ZHIZHI_CF_AUTO) throw new Error(`HTTP ${statusCode || "unknown"} @ ${url}`);
+
+  OmniBox.log("warn", `[cf] ${url} 被CF盾拦截，尝试自动处理`);
+  const solved = await requestWithFlareSolverr(url).catch(() => null);
+  let solvedCookie = solved?.cookie || "";
+  if (!solvedCookie && solved?.statusCode >= 200 && solved?.statusCode < 400 && solved?.html && !isBlockedHtml(solved.html)) {
+    solvedCookie = mergeCookies(solvedCookie, cookiesFromSetCookie(solved.headers?.["set-cookie"]));
+  }
+  let solvedHtml = solved?.html || "";
+  if ((!solvedHtml || isBlockedHtml(solvedHtml)) && ZHIZHI_FLARESOLVERR_URL) {
+    OmniBox.log("warn", `[cf] FlareSolverr 结果无效，尝试刷新 cf_clearance`);
+    const refreshed = await ensureCfCookie(true, url).catch(() => "");
+    solvedCookie = refreshed;
+    solvedHtml = "";
+  }
+  if (!solvedHtml && ZHIZHI_FLARESOLVERR_URL) {
+    const retry = await requestWithFlareSolverr(url).catch(() => null);
+    if (retry?.html && !isBlockedHtml(retry.html)) {
+      solvedCookie = retry.cookie || solvedCookie;
+      solvedHtml = retry.html;
+    }
+  }
+  if (!solvedHtml && !ZHIZHI_FLARESOLVERR_URL) {
+    const refreshed = await ensureCfCookie(true, url).catch(() => "");
+    if (refreshed) {
+      const retryResponse = await OmniBox.request(url, {
+        method: options.method || "GET",
+        headers: { ...headers, ...buildCookieHeader(refreshed) },
+        timeout: options.timeout || 30000,
+        body: options.body,
+      });
+      const retryStatus = Number(retryResponse?.statusCode || 200);
+      const retryBody = getBodyText(retryResponse);
+      if (retryStatus >= 200 && retryStatus < 400 && retryBody && !isBlockedHtml(retryBody)) {
+        solvedCookie = refreshed;
+        solvedHtml = retryBody;
+      }
+    }
+  }
+  if (solvedCookie) {
+    await setCachedCfCookie(solvedCookie);
+    const solvedUa = text(solved?.userAgent || "");
+    if (solvedUa && !text(ZHIZHI_BROWSER_UA)) ZHIZHI_BROWSER_UA = solvedUa;
+  }
+  if (solvedHtml && !isBlockedHtml(solvedHtml)) return solvedHtml;
+  throw new Error(`Cloudflare challenge unresolved @ ${url}`);
 }
 
 function decodeHtml(text) {

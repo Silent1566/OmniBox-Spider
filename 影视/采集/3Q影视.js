@@ -2,12 +2,12 @@
 // @author W.Q, @wujiwanmei, @lucky_TJQ, tcxp, @shortai, 梦
 // @description 刮削：支持，弹幕：支持，嗅探：支持
 // @dependencies: axios, crypto
-// @version 1.0.7
+// @version 1.1.0
 // @downloadURL https://gh-proxy.org/https://github.com/Silent1566/OmniBox-Spider/raw/refs/heads/main/影视/采集/3Q影视.js
 
 /**
  * ============================================================================
- * 哔哔影视 (bbys.app)
+ * 多多追剧 (https://duoduozhuiju.com/ 发布页)
  * 刮削：支持
  * 弹幕：支持
  * 嗅探：支持
@@ -30,17 +30,23 @@ const path = require("path");
 const OmniBox = require("omnibox_sdk");
 
 // ========== 全局配置 ==========
+const UA = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/142.0.0.0 Safari/537.36';
+const DUODUO_RELEASE_URL = 'https://duoduozhuiju.com';
+const HOST_CANDIDATES = ['https://dduotv01.top', 'https://323433ssdfd.top', 'https://xds2435u23422342342u.top'];
+const HOST_CACHE_KEY = 'duoduo:active_host';
+const HOST_CACHE_TTL = 60 * 60 * 24 * 30;
+const HOST_PROBE_TIMEOUT = 8000;
+let ACTIVE_HOST = HOST_CANDIDATES[0];
+let ensureActiveHostPromise = null;
+
 const config = {
-    host: 'https://bbys.app',
-    wasmUrl: 'https://bbys.app/assets/web_app_wasm_bg-DaFtKBCq.wasm',
-    wasmCacheFile: 'bbys.wasm',
+    wasmCacheFile: 'duoduo.wasm',
     headers: {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/142.0.0.0 Safari/537.36',
+        'User-Agent': UA,
         'Accept': 'application/json',
         'X-Client': '8f3d2a1c7b6e5d4c9a0b1f2e3d4c5b6a',
-        'web-sign': 'f65f3a83d6d9ad6f',
-        'accept-language': 'zh-CN,zh;q=0.9',
-        'referer': 'https://bbys.app/'
+        'web-sign': 'ddtvf65f3a83d6d9ad6f',
+        'accept-language': 'zh-CN,zh;q=0.9'
     }
 };
 
@@ -56,9 +62,21 @@ const _http = axios.create({
 
 // 播放请求头
 const PLAY_HEADERS = {
-    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/142.0.0.0 Safari/537.36",
-    "Referer": "https://bbys.app/",
-    "Origin": "https://bbys.app"
+    "User-Agent": UA,
+    "Referer": `${ACTIVE_HOST}/`,
+    "Origin": ACTIVE_HOST
+};
+
+const normalizeHost = (url = "") => {
+    const value = String(url || "").trim();
+    if (!value) return "";
+    const withProtocol = /^https?:\/\//i.test(value) ? value : `https://${value}`;
+    try {
+        const target = new URL(withProtocol);
+        return `${target.protocol}//${target.host}`;
+    } catch {
+        return withProtocol.replace(/\/+$/, "");
+    }
 };
 
 const isHttpUrl = (u) => u && (u.startsWith('http://') || u.startsWith('https://'));
@@ -73,13 +91,192 @@ const shouldAppendSourceCode = (code, name) => {
     return sourceCode.toLowerCase() !== sourceName.toLowerCase();
 };
 const buildLineDisplayName = (name, code) => {
-    const sourceName = String(name || "").trim() || String(code || "").trim() || "布布影视2";
+    const sourceName = String(name || "").trim() || String(code || "").trim() || "多多追剧";
     const sourceCode = String(code || "").trim();
     if (shouldAppendSourceCode(sourceCode, sourceName)) {
         return `${sourceName} (${sourceCode})`;
     }
     return sourceName;
 };
+
+async function requestTextAbsolute(url, options = {}) {
+    const response = await _http.get(url, {
+        timeout: options.timeout || HOST_PROBE_TIMEOUT,
+        headers: options.headers || {},
+        maxRedirects: options.maxRedirects || 3,
+        responseType: options.responseType
+    });
+    return response.data;
+}
+
+async function fetchReleaseHosts() {
+    const releaseHost = normalizeHost(DUODUO_RELEASE_URL);
+    const found = [];
+    const pushHost = (value) => {
+        const normalized = normalizeHost(value);
+        if (!normalized) return;
+        const host = new URL(normalized).host;
+        if (host === new URL(releaseHost).host) return;
+        if (/duoduozhuiju\.com$|dduotv01\.top$|umm\.dduotv01\.top$/i.test(host)) return;
+        found.push(normalized);
+    };
+
+    let html = "";
+    try {
+        html = await requestTextAbsolute(`${releaseHost}/`, {
+            timeout: HOST_PROBE_TIMEOUT,
+            hostForHeaders: releaseHost
+        });
+    } catch (error) {
+        logInfo('读取发布页域名失败', { release: DUODUO_RELEASE_URL, error: error.message });
+        return [];
+    }
+
+    const scriptSrcs = [...String(html).matchAll(/<script[^>]*src=["']([^"']+)["']/gi)].map((m) => m[1]);
+    const configSrc = scriptSrcs.find((src) => /(?:^|\/)config(?:\.min)?\.js(?:[?#]|$)/i.test(src));
+    if (configSrc) {
+        const configUrl = configSrc.startsWith('http') ? configSrc : `${releaseHost}/${configSrc.replace(/^\/+/, '')}`;
+        try {
+            const configText = await requestTextAbsolute(configUrl, {
+                timeout: HOST_PROBE_TIMEOUT,
+                hostForHeaders: releaseHost
+            });
+            const hostRegex = /(?:host|domain)\s*:\s*['"]([^'"]+)['"]|lines\s*:\s*\[([\s\S]*?)\]/gi;
+            let match;
+            while ((match = hostRegex.exec(configText))) {
+                pushHost(match[1] || "");
+                (String(match[2] || '').match(/host\s*:\s*['"]([^'"]+)['"]/gi) || [])
+                    .forEach((item) => pushHost(item.replace(/^.*host\s*:\s*['"]([^'"]+)['"].*$/i, '$1')));
+            }
+        } catch (error) {
+            logInfo('发布页 config.js 获取失败', { url: configUrl, error: error.message });
+        }
+    }
+
+    const domainRegex = /https?:\/\/[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}(?::\d+)?/g;
+    const hrefRegex = /href=["']([^"']+)["']/g;
+    let match;
+    while ((match = domainRegex.exec(html))) pushHost(match[0]);
+    while ((match = hrefRegex.exec(html))) {
+        const href = String(match[1] || '').trim();
+        if (/^https?:\/\//i.test(href)) pushHost(href);
+    }
+
+    const unique = found.filter((item, index, arr) => arr.indexOf(item) === index);
+    logInfo('发布页候选域名', { count: unique.length, hosts: unique.slice(0, 12) });
+    return unique;
+}
+
+async function probeHost(host) {
+    try {
+        const text = await requestTextAbsolute(`${host}/api.php/web/index/home`, {
+            timeout: HOST_PROBE_TIMEOUT,
+            hostForHeaders: host,
+            headers: config.headers
+        });
+        const json = typeof text === 'string' ? JSON.parse(text) : text;
+        if (json && json.data) return true;
+        logInfo('域名探测返回非 JSON', { host });
+        return false;
+    } catch (error) {
+        logInfo('域名探测失败', { host, error: error.message });
+        return false;
+    }
+}
+
+async function readActiveHostCache() {
+    try {
+        const cached = await OmniBox.getCache(HOST_CACHE_KEY);
+        const normalized = normalizeHost(cached || "");
+        if (normalized) {
+            logInfo('命中域名缓存', { host: normalized });
+            return normalized;
+        }
+    } catch (error) {
+        logInfo('读取域名缓存失败', { error: error.message });
+    }
+    return "";
+}
+
+async function saveActiveHostCache(host) {
+    const normalized = normalizeHost(host);
+    if (!normalized) return;
+    try {
+        await OmniBox.setCache(HOST_CACHE_KEY, normalized, HOST_CACHE_TTL);
+        logInfo('写入域名缓存', { host: normalized });
+    } catch (error) {
+        logInfo('写入域名缓存失败', { host: normalized, error: error.message });
+    }
+}
+
+async function ensureActiveHost(preferredHost = "") {
+    if (ensureActiveHostPromise) return ensureActiveHostPromise;
+    ensureActiveHostPromise = (async () => {
+        const preferred = normalizeHost(preferredHost);
+        const cachedHost = await readActiveHostCache();
+        const quickList = [preferred, cachedHost, getCurrentHost(), ...HOST_CANDIDATES]
+            .filter(Boolean)
+            .filter((item, index, arr) => arr.indexOf(item) === index);
+        for (const host of quickList) {
+            if (await probeHost(host)) {
+                ACTIVE_HOST = host;
+                await saveActiveHostCache(host);
+                return ACTIVE_HOST;
+            }
+        }
+
+        const releaseHosts = await fetchReleaseHosts();
+        const ordered = [...releaseHosts, ...HOST_CANDIDATES]
+            .filter(Boolean)
+            .filter((item, index, arr) => arr.indexOf(item) === index);
+        for (const host of ordered) {
+            if (await probeHost(host)) {
+                logInfo('发布页域名可用', { to: host });
+                ACTIVE_HOST = host;
+                await saveActiveHostCache(host);
+                return ACTIVE_HOST;
+            }
+        }
+        throw new Error(`未找到可用域名: ${[...quickList, ...ordered].join(', ')}`);
+    })();
+    try {
+        return await ensureActiveHostPromise;
+    } finally {
+        ensureActiveHostPromise = null;
+    }
+}
+
+function getCurrentHost() {
+    return ACTIVE_HOST || HOST_CANDIDATES[0];
+}
+
+async function apiGet(url) {
+    if (/^https?:\/\//i.test(url)) {
+        const response = await _http.get(url, { headers: { ...config.headers, referer: `${getCurrentHost()}/` } });
+        if (response?.data?.code === 408) {
+            response.data = { code: 200, msg: response.data.msg || 'success', data: [] };
+        }
+        return response;
+    }
+
+    let lastError = null;
+    for (const host of [getCurrentHost(), ...HOST_CANDIDATES]) {
+        try {
+            ACTIVE_HOST = normalizeHost(host);
+            await ensureActiveHost(ACTIVE_HOST);
+            const target = url.startsWith('/') ? `${ACTIVE_HOST}${url}` : `${ACTIVE_HOST}/${url}`;
+            const response = await _http.get(target, { headers: { ...config.headers, referer: `${ACTIVE_HOST}/` } });
+            if (response?.data?.code === 408) {
+                response.data = { code: 200, msg: response.data.msg || 'success', data: [] };
+            }
+            return response;
+        } catch (error) {
+            lastError = error;
+            logInfo('候选域名请求失败', { host, url, error: error.message });
+        }
+    }
+    throw lastError || new Error(`请求失败: ${url}`);
+}
 
 async function sniffPlayUrl(playUrl) {
     try {
@@ -101,11 +298,11 @@ async function sniffPlayUrl(playUrl) {
  */
 const logInfo = (message, data = null) => {
     const output = data ? `${message}: ${JSON.stringify(data)}` : message;
-    OmniBox.log("info", `[哔哔影视] ${output}`);
+    OmniBox.log("info", `[多多追剧] ${output}`);
 };
 
 const logError = (message, error) => {
-    OmniBox.log("error", `[哔哔影视] ${message}: ${error.message || error}`);
+    OmniBox.log("error", `[多多追剧] ${message}: ${error.message || error}`);
 };
 
 /**
@@ -327,7 +524,7 @@ const json2vods = (arr) => (arr || []).map(i => ({
 }));
 
 // ============================================================
-// WASM 解码模块 - 用于解密 bbys.app 的加密播放地址
+// WASM 解码模块 - 用于解密多多追剧加密播放地址
 // 该模块使用 Protobuf + WASM 技术解码加密的视频 URL
 // ============================================================
 
@@ -496,8 +693,8 @@ async function initWasm() {
             // 尝试多个可能的 WASM 文件路径
             const possiblePaths = [
                 path.join(__dirname, config.wasmCacheFile),
-                '/www/wwwroot/vodspider/vod/routes/bbys.wasm',
-                '/tmp/bbys.wasm'
+                '/www/wwwroot/vodspider/vod/routes/duoduo.wasm',
+                '/tmp/duoduo.wasm'
             ];
 
             let wasmBuf = null;
@@ -514,23 +711,17 @@ async function initWasm() {
             // 如果本地没有，从远程下载
             if (!wasmBuf) {
                 logInfo('本地未找到 WASM 文件，开始从远程下载...');
-                wasmBuf = await new Promise((resolve, reject) => {
-                    https.get(config.wasmUrl, (res) => {
-                        const chunks = [];
-                        res.on('data', c => chunks.push(c));
-                        res.on('end', () => {
-                            const buf = Buffer.concat(chunks);
-                            // 保存到本地缓存
-                            try {
-                                fs.writeFileSync(path.join(__dirname, config.wasmCacheFile), buf);
-                                logInfo('WASM 文件已缓存到本地');
-                            } catch (e) {
-                                logError('WASM 文件缓存失败', e);
-                            }
-                            resolve(buf);
-                        });
-                    }).on('error', reject);
-                });
+                await ensureActiveHost();
+                wasmBuf = Buffer.from(await requestTextAbsolute(
+                    `${ACTIVE_HOST}/assets/web_app_wasm_bg-Bxwbrgev.wasm`,
+                    { timeout: 30000, responseType: 'arraybuffer' }
+                ));
+                try {
+                    fs.writeFileSync(path.join(__dirname, config.wasmCacheFile), wasmBuf);
+                    logInfo('WASM 文件已缓存到本地');
+                } catch (e) {
+                    logError('WASM 文件缓存失败', e);
+                }
             }
 
             // 实例化 WASM 模块
@@ -641,31 +832,21 @@ function wasmGetSignatureHeaders() {
  * @returns {Promise<Object>} 响应对象 { status, body }
  */
 async function postProtobuf(url, data, extraHeaders = {}) {
-    return new Promise((resolve, reject) => {
-        const u = new URL(url);
-        const req = https.request({
-            hostname: u.hostname,
-            path: u.pathname,
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/x-protobuf',
-                'Accept': 'application/x-protobuf',
-                'Content-Length': data.length,
-                'User-Agent': config.headers['User-Agent'],
-                'Referer': `${config.host}/`,
-                'Origin': config.host,
-                ...extraHeaders
-            }
-        }, (res) => {
-            const chunks = [];
-            res.on('data', c => chunks.push(c));
-            res.on('end', () => resolve({ status: res.statusCode, body: Buffer.concat(chunks) }));
-        });
-        req.on('error', reject);
-        req.setTimeout(10000, () => { req.destroy(); reject(new Error('timeout')); });
-        req.write(data);
-        req.end();
+    await ensureActiveHost();
+    const target = url.startsWith('/') ? `${ACTIVE_HOST}${url}` : `${ACTIVE_HOST}/${url}`;
+    const response = await _http.post(target, Buffer.from(data), {
+        timeout: 10000,
+        headers: {
+            'Content-Type': 'application/x-protobuf',
+            'Accept': 'application/x-protobuf',
+            'User-Agent': UA,
+            'Referer': `${ACTIVE_HOST}/`,
+            'Origin': ACTIVE_HOST,
+            ...extraHeaders
+        },
+        responseType: 'arraybuffer'
     });
+    return { status: response.status, body: Buffer.from(response.data || []) };
 }
 
 /**
@@ -673,10 +854,6 @@ async function postProtobuf(url, data, extraHeaders = {}) {
  * @param {string} url - 请求 URL
  * @returns {Promise} axios 响应对象
  */
-async function apiGet(url) {
-    return _http.get(url, { headers: config.headers });
-}
-
 /**
  * 使用 WASM 解码加密的播放地址
  * @param {string} rawUrl - 加密的 URL
@@ -702,7 +879,7 @@ async function decodeEncryptedUrl(rawUrl, vodFrom) {
 
         // 3. 发送 Protobuf 请求
         const resp = await postProtobuf(
-            `${config.host}/api.php/web/decode/url`,
+            `/api.php/web/decode/url`,
             reqData,
             sigHeaders
         );
@@ -1075,7 +1252,7 @@ const buildPlaySourcesFromLines = (lines, vodName, videoId = "") => {
         }).filter(e => e.playId);
 
         return {
-            name: line.lineName || '布布影视2',
+            name: line.lineName || '多多追剧',
             episodes
         };
     }).filter(source => source.episodes && source.episodes.length > 0);
@@ -1093,7 +1270,7 @@ async function home(params) {
 
     try {
         // 请求首页获取分类数据
-        const res = await apiGet(`${config.host}/api.php/web/index/home`);
+        const res = await apiGet(`/api.php/web/index/home`);
         const list = [];
         const homeData = res.data.data || {};
 
@@ -1156,7 +1333,7 @@ async function category(params) {
         const PAGE_SIZE = 24;
 
         // 构建请求 URL
-        let url = `${config.host}/api.php/web/filter/vod?type_name=${encodeURIComponent(categoryId)}&page=${pg}&limit=${PAGE_SIZE}`;
+        let url = `/api.php/web/filter/vod?type_name=${encodeURIComponent(categoryId)}&page=${pg}&limit=${PAGE_SIZE}`;
 
         // 添加筛选参数
         const extend = filters || {};
@@ -1214,7 +1391,7 @@ async function detail(params) {
 
     try {
         // 请求详情数据
-        const res = await apiGet(`${config.host}/api.php/web/vod/get_detail?vod_id=${videoId}`);
+        const res = await apiGet(`/api.php/web/vod/get_detail?vod_id=${videoId}`);
         const data = res.data.data[0];
         const vodplayer = Array.isArray(res.data.vodplayer) ? res.data.vodplayer : [];
 
@@ -1226,30 +1403,34 @@ async function detail(params) {
             vod_remarks: data.vod_remarks,
             vod_content: data.vod_content,
             vod_year: data.vod_year.toString() || '',
-            vod_area: data.vod_area || '',
-            vod_actor: data.vod_actor || '',
-            vod_director: data.vod_director || '',
+            vod_area: Array.isArray(data.vod_area) ? data.vod_area.join(',') : (data.vod_area || ''),
+            vod_actor: Array.isArray(data.vod_actor) ? data.vod_actor.join(',') : (data.vod_actor || ''),
+            vod_director: Array.isArray(data.vod_director) ? data.vod_director.join(',') : (data.vod_director || ''),
             type_name: data.type_name || ''
         };
-
         logInfo(`视频标题: ${vod.vod_name}`);
 
         // 解析播放线路
-        const rawShows = data.vod_play_from.split('$$$');
-        const rawUrlsList = data.vod_play_url.split('$$$');
+        const rawShows = String(data.vod_play_from || '').split('$$$');
+        const rawUrlsList = String(data.vod_play_url || '').split('$$$');
         const validLines = [];
         const pushLine = (lineName, playUrls, order, sourceCode = "") => {
             if (!playUrls) return;
             validLines.push({ lineName, playUrls, order, sourceCode: String(sourceCode || "").trim() });
         };
 
+        const missingPlayerLines = [];
         rawShows.forEach((showCode, index) => {
+            const rawUrls = String(rawUrlsList[index] || "");
+
             const playerInfo = vodplayer.find(p => p.from === showCode);
-            if (!playerInfo) return;
+            if (!playerInfo) {
+                if (rawUrls) missingPlayerLines.push({ showCode, rawUrls });
+                return;
+            }
 
             const lineName = buildLineDisplayName(playerInfo.show, showCode);
 
-            const rawUrls = String(rawUrlsList[index] || "");
             const urls = rawUrls.split('#').map(urlItem => {
                 if (urlItem.includes('$')) {
                     const [episode, url] = urlItem.split('$');
@@ -1264,8 +1445,23 @@ async function detail(params) {
             }
         });
 
+        // 新站偶发缺失 vodplayer 元数据，兼容按直连兜底解析播放线路
+        if (validLines.length === 0 && missingPlayerLines.length > 0) {
+            missingPlayerLines.forEach(({ showCode, rawUrls }, lineIndex) => {
+                const urls = rawUrls.split('#').map(urlItem => {
+                    if (!urlItem || !urlItem.includes('$')) return null;
+                    const [episode, url] = urlItem.split('$');
+                    return `${episode}$${showCode}@0@${url}`;
+                }).filter(Boolean);
+
+                if (urls.length > 0) {
+                    pushLine(buildLineDisplayName(showCode, showCode), urls.join('#'), lineIndex, showCode);
+                }
+            });
+        }
+
         try {
-            const aggregateRes = await apiGet(`${config.host}/api.php/web/internal/search_aggregate?vod_id=${videoId}`);
+            const aggregateRes = await apiGet(`/api.php/web/internal/search_aggregate?vod_id=${videoId}`);
             const aggregateItems = Array.isArray(aggregateRes?.data?.data) ? aggregateRes.data.data : [];
             aggregateItems.forEach((item, idx) => {
                 const rawPlayUrl = String(item?.vod_play_url || "").trim();
@@ -1512,7 +1708,7 @@ async function search(params) {
     logInfo(`搜索关键词: ${wd}, 页码: ${pg}`);
 
     try {
-        const res = await apiGet(`${config.host}/api.php/web/search/index?wd=${encodeURIComponent(wd)}&page=${pg}&limit=50`);
+        const res = await apiGet(`/api.php/web/search/index?wd=${encodeURIComponent(wd)}&page=${pg}&limit=50`);
         const items = res.data.data || [];
         const hasMore = items.length >= 50;
 
@@ -1617,7 +1813,7 @@ async function play(params) {
                 logError('解码失败', new Error(`无法解码 ${play_from}: ${raw_url.substring(0, 40)}...`));
                 // 解码失败，返回空地址
                 return {
-                    urls: [{ name: "哔哔影视", url: "" }],
+                    urls: [{ name: "多多追剧", url: "" }],
                     parse: 0,
                     header: PLAY_HEADERS
                 };
@@ -1639,7 +1835,7 @@ async function play(params) {
 
         // 构建播放响应
         const playResponse = {
-            urls: [{ name: "哔哔影视", url: finalUrl }],
+            urls: [{ name: "多多追剧", url: finalUrl }],
             parse: parseFlag,
             header: playHeader
         };
@@ -1665,7 +1861,7 @@ async function play(params) {
     } catch (error) {
         logError("播放解析失败", error);
         return {
-            urls: [{ name: "哔哔影视", url: "" }],
+            urls: [{ name: "多多追剧", url: "" }],
             parse: 0,
             header: PLAY_HEADERS
         };
