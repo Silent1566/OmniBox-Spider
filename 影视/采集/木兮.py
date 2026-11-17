@@ -2,7 +2,7 @@
 # @name 木兮
 # @author 梦
 # @description 影视站：https://film.symx.club ，Python版，接入首页、分类、搜索、详情与播放签名链路
-# @version 1.2.13
+# @version 1.2.14
 # @downloadURL https://gh-proxy.org/https://github.com/Silent1566/OmniBox-Spider/raw/refs/heads/main/影视/采集/木兮.py
 # @dependencies cloudscraper,curl_cffi,Pillow,ddddocr,pycryptodome
 
@@ -1304,36 +1304,6 @@ async def run_muxi_scraping_task(vod_id, vod_name, play_sources):
         await log("warn", f"[木兮][scrape] {e}")
 
 
-async def run_muxi_play_side_effects(vod_id, vod_name, episode_name, play_url, headers, referer, file_id=""):
-    try:
-        total_duration = None
-        try:
-            media_info = await OmniBox.getVideoMediaInfo(play_url, headers or {})
-            duration = float((((media_info or {}).get("format") or {}).get("duration") or 0))
-            if duration > 0:
-                total_duration = int(round(duration))
-        except Exception as e:
-            await log("warn", f"[木兮][media-info] {e}")
-
-        try:
-            await OmniBox.addPlayHistory(
-                build_muxi_resource_id(vod_id) or play_url,
-                vod_name or "木兮",
-                {
-                    "episode": episode_name or "播放",
-                    "episodeName": episode_name or "播放",
-                    "playUrl": play_url,
-                    "playHeader": headers or {},
-                    "totalDuration": total_duration,
-                },
-            )
-            await log("info", f"[木兮][history] done vodId={build_muxi_resource_id(vod_id) or play_url} episode={episode_name or '播放'} duration={total_duration or 0}")
-        except Exception as e:
-            await log("warn", f"[木兮][history] {e}")
-    except Exception as e:
-        await log("warn", f"[木兮][play-side-effects] {e}")
-
-
 def map_home_poster_item(item):
     if not isinstance(item, dict):
         return {}
@@ -1691,18 +1661,6 @@ async def play(params, context):
         except Exception as e:
             await log("warn", f"[木兮][play] danmaku attach failed {e}")
         set_cache(cache_key, result)
-        await spawn_background_job(
-            run_muxi_play_side_effects(
-                film_id,
-                vod_name_for_side,
-                episode_name,
-                play_url,
-                result.get("header") or {},
-                referer,
-                file_id,
-            ),
-            f"play-side-effects:{film_id}:{line_id}",
-        )
         return result
     except Exception as e:
         await log("error", f"[木兮][play] {e}")

@@ -2,7 +2,7 @@
 // @author
 // @description 刮削：支持，弹幕：支持，播放记录：支持
 // @dependencies: axios, cheerio
-// @version 1.0.2
+// @version 1.0.3
 // @downloadURL https://gh-proxy.org/https://github.com/Silent1566/OmniBox-Spider/raw/refs/heads/main/影视/网盘/多多.js
 
 // 引入 OmniBox SDK
@@ -1048,10 +1048,6 @@ async function play(params) {
     OmniBox.log("info", `解析参数: shareURL=${shareURL}, fileId=${fileId}`);
 
     let danmakuList = [];
-    let scrapeTitle = "";
-    let scrapePic = "";
-    let episodeNumber = null;
-    let episodeName = params.episodeName || "";
 
     try {
       // 优先使用视频ID维度读取刮削元数据，与 detail 阶段保持一致
@@ -1077,18 +1073,6 @@ async function play(params) {
         if (matchedMapping && metadata.scrapeData) {
           const scrapeData = metadata.scrapeData;
           OmniBox.log("info", `找到文件映射,fileId: ${formattedFileId}`);
-
-          scrapeTitle = scrapeData.title || "";
-          if (scrapeData.posterPath) {
-            scrapePic = `https://image.tmdb.org/t/p/w500${scrapeData.posterPath}`;
-          }
-
-          if (matchedMapping.episodeNumber) {
-            episodeNumber = matchedMapping.episodeNumber;
-          }
-          if (matchedMapping.episodeName && !episodeName) {
-            episodeName = matchedMapping.episodeName;
-          }
 
           let fileName = "";
           const scrapeType = metadata.scrapeType || "";
@@ -1127,32 +1111,6 @@ async function play(params) {
 
     if (!playInfo || !playInfo.url || !Array.isArray(playInfo.url) || playInfo.url.length === 0) {
       throw new Error("无法获取播放地址");
-    }
-
-    try {
-      const vodId = params.vodId || shareURL;
-      if (vodId) {
-        const title = params.title || scrapeTitle || shareURL;
-        const pic = params.pic || scrapePic || "";
-
-        const added = await OmniBox.addPlayHistory({
-          vodId: vodId,
-          title: title,
-          pic: pic,
-          episode: playId,
-          sourceId: shareURL,
-          episodeNumber: episodeNumber,
-          episodeName: episodeName,
-        });
-
-        if (added) {
-          OmniBox.log("info", `已添加观看记录: ${title}`);
-        } else {
-          OmniBox.log("info", `观看记录已存在,跳过添加: ${title}`);
-        }
-      }
-    } catch (error) {
-      OmniBox.log("warn", `添加观看记录失败: ${error.message}`);
     }
 
     const urlList = playInfo.url || [];

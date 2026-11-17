@@ -2,7 +2,7 @@
 // @author 梦
 // @description 页面解析：已接入；播放优先直解析，失败后 SDK 嗅探，再失败交给播放器嗅探
 // @dependencies cheerio
-// @version 1.1.1
+// @version 1.1.2
 // @downloadURL https://gh-proxy.org/https://github.com/Silent1566/OmniBox-Spider/raw/refs/heads/main/影视/采集/电影人生.js
 
 const OmniBox = require("omnibox_sdk");
@@ -446,41 +446,6 @@ async function play(params, context) {
     }
 
     if (directUrl && looksLikeDirectMedia(directUrl)) {
-      Promise.resolve().then(async () => {
-        let totalDuration;
-        try {
-          await OmniBox.log("info", `[电影人生][play] 准备探测媒体信息并写入播放记录 title=${meta.title || ""}, origin=${origin}, finalUrl=${directUrl}`);
-          const mediaInfo = await OmniBox.getVideoMediaInfo(directUrl, headers);
-          const duration = Number(mediaInfo?.format?.duration || 0);
-          if (Number.isFinite(duration) && duration > 0) {
-            totalDuration = Math.round(duration);
-          }
-          await OmniBox.log("info", `[电影人生][play] 媒体信息探测完成 totalDuration=${totalDuration || 0}`);
-        } catch (error) {
-          await OmniBox.log("warn", `[电影人生][play] 获取媒体时长失败: ${error?.message || String(error)}`);
-        }
-
-        try {
-          const historyPayload = {
-            vodId: safePageUrl || directUrl,
-            title: meta.vodName || meta.title || origin || "电影人生",
-            episode: safePageUrl || directUrl,
-            episodeName: meta.title || undefined,
-            pic: meta.pic || undefined,
-            playUrl: directUrl,
-            playHeader: headers,
-            totalDuration,
-          };
-          await OmniBox.log("info", `[电影人生][play] 准备写入观看记录 vodId=${historyPayload.vodId}, episodeName=${historyPayload.episodeName || ""}`);
-          await OmniBox.addPlayHistory(historyPayload);
-          await OmniBox.log("info", `[电影人生][play] 观看记录写入完成 vodId=${historyPayload.vodId}`);
-        } catch (error) {
-          await OmniBox.log("warn", `[电影人生][play] 写入观看记录失败: ${error?.message || String(error)}`);
-        }
-      }).catch(async (error) => {
-        await OmniBox.log("warn", `[电影人生][play] 异步播放记录任务异常: ${error?.message || String(error)}`);
-      });
-
       const result = {
         parse: 0,
         url: directUrl,

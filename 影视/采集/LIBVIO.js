@@ -1,8 +1,8 @@
 // @name LIBVIO
 // @author 梦
-// @description 刮削：已接入，弹幕：已接入，播放记录：已接入，嗅探：不需要（直链优先，支持网盘线路展开）
+// @description 刮削：已接入，弹幕：已接入，嗅探：不需要（直链优先，支持网盘线路展开）
 // @dependencies
-// @version 1.5.7
+// @version 1.5.8
 // @downloadURL https://gh-proxy.org/https://github.com/Silent1566/OmniBox-Spider/raw/refs/heads/main/影视/采集/LIBVIO.js
 
 const http = require("http");
@@ -383,13 +383,6 @@ function buildDanmakuFileName(vodName = "", episodeName = "") {
     if (!title) return "";
     const episode = normalizeText(episodeName || "");
     return episode ? `${title} ${episode}` : title;
-}
-
-function buildHistoryEpisode(playId, episodeNumber, episodeName) {
-    if (episodeNumber !== undefined && episodeNumber !== null && episodeNumber !== "") {
-        return `${playId || ""}@@${episodeNumber}`;
-    }
-    return `${playId || ""}@@${normalizeText(episodeName || "正片") || "正片"}`;
 }
 
 function sortEpisodesByMeta(episodes = []) {
@@ -1688,8 +1681,6 @@ async function play(params, context) {
                     const result = {
                         danmakuList: [],
                         scrapeTitle: "",
-                        scrapePic: "",
-                        episodeNumber: meta?.n ?? null,
                         episodeName: meta?.name || meta?.e || "",
                     };
                     if (!meta?.fid || typeof OmniBox.getScrapeMetadata !== "function") {
@@ -1703,16 +1694,10 @@ async function play(params, context) {
                             return result;
                         }
                         result.scrapeTitle = metadata.scrapeData.title || "";
-                        if (metadata.scrapeData.posterPath) {
-                            result.scrapePic = `https://image.tmdb.org/t/p/w500${metadata.scrapeData.posterPath}`;
-                        }
                         const mappings = Array.isArray(metadata.videoMappings) ? metadata.videoMappings : [];
                         const mapping = mappings.find((item) => item?.fileId === meta.fid);
                         if (mapping) {
                             result.episodeName = buildScrapedEpisodeName(metadata.scrapeData, mapping, result.episodeName || meta.name || "");
-                            if (mapping.episodeNumber !== undefined && mapping.episodeNumber !== null) {
-                                result.episodeNumber = mapping.episodeNumber;
-                            }
                         }
                         const fileName = buildDanmakuFileName(result.scrapeTitle || meta.vodName || "", result.episodeName || meta.name || "");
                         if (fileName && typeof OmniBox.getDanmakuByFileName === "function") {
@@ -1733,22 +1718,6 @@ async function play(params, context) {
                     const urlList = Array.isArray(playInfo?.url) ? playInfo.url : [];
                     const metadataValue = metadataResult.status === "fulfilled" ? metadataResult.value : {};
                     const danmakuList = metadataValue?.danmakuList?.length ? metadataValue.danmakuList : (playInfo?.danmaku || []);
-                    if (meta?.fid && context?.sourceId && typeof OmniBox.addPlayHistory === "function") {
-                        const historyPayload = {
-                            vodId: String(meta.sid || meta.vodId || ""),
-                            title: metadataValue?.scrapeTitle || meta.vodName || meta.name || "LIBVIO视频",
-                            pic: metadataValue?.scrapePic || "",
-                            episode: buildHistoryEpisode(playId, metadataValue?.episodeNumber, metadataValue?.episodeName || meta.name || meta.e || ""),
-                            sourceId: context.sourceId,
-                            episodeNumber: metadataValue?.episodeNumber,
-                            episodeName: metadataValue?.episodeName || meta.name || meta.e || "",
-                        };
-                        OmniBox.addPlayHistory(historyPayload).then((added) => {
-                            OmniBox.log("info", `[LIBVIO] play 网盘播放记录${added ? "已添加" : "已存在"}: ${historyPayload.title}`);
-                        }).catch((error) => {
-                            OmniBox.log("info", `[LIBVIO] play 网盘添加播放记录失败: ${error.message}`);
-                        });
-                    }
                     return {
                         urls: urlList.map((item) => ({ name: item.name || meta.name || "播放", url: item.url })),
                         header: playInfo?.header || {},
@@ -1832,8 +1801,6 @@ async function play(params, context) {
             const result = {
                 danmakuList: [],
                 scrapeTitle: "",
-                scrapePic: "",
-                episodeNumber: meta?.n ?? null,
                 episodeName: meta?.e || meta?.name || "",
             };
             if (!meta?.fid || !meta?.sid || typeof OmniBox.getScrapeMetadata !== "function") {
@@ -1847,17 +1814,11 @@ async function play(params, context) {
                     return result;
                 }
                 result.scrapeTitle = metadata.scrapeData.title || "";
-                if (metadata.scrapeData.posterPath) {
-                    result.scrapePic = `https://image.tmdb.org/t/p/w500${metadata.scrapeData.posterPath}`;
-                }
                 const mappings = Array.isArray(metadata.videoMappings) ? metadata.videoMappings : [];
                 logInfo("play 播放增强元数据", { videoId: meta.sid || "", mappings: mappings.length, fid: meta.fid });
                 const mapping = mappings.find((item) => item?.fileId === meta.fid);
                 if (mapping) {
                     result.episodeName = buildScrapedEpisodeName(metadata.scrapeData, mapping, result.episodeName || meta.name || "");
-                    if (mapping.episodeNumber !== undefined && mapping.episodeNumber !== null) {
-                        result.episodeNumber = mapping.episodeNumber;
-                    }
                 } else if (mappings.length > 0) {
                     logInfo("play 播放增强未命中 mapping", { expected: meta.fid, preview: mappings.slice(0, 2).map((item) => `${item?.fileId || "<empty>"}=>${item?.episodeName || ""}`).join(" | ") });
                 }
@@ -1882,43 +1843,13 @@ async function play(params, context) {
         }
         const playResult = playInfoResult.value || { urls: [], parse: 0, header: {} };
         let danmakuList = [];
-        let scrapeTitle = "";
-        let scrapePic = "";
-        let episodeNumber = meta?.n ?? null;
-        let episodeName = meta?.e || meta?.name || "";
         if (metadataResult.status === "fulfilled" && metadataResult.value) {
             danmakuList = metadataResult.value.danmakuList || [];
-            scrapeTitle = metadataResult.value.scrapeTitle || "";
-            scrapePic = metadataResult.value.scrapePic || "";
-            if (metadataResult.value.episodeNumber !== undefined && metadataResult.value.episodeNumber !== null) {
-                episodeNumber = metadataResult.value.episodeNumber;
-            }
-            episodeName = metadataResult.value.episodeName || episodeName;
         } else if (metadataResult.status === "rejected") {
             logInfo("play 播放增强链路失败(不影响播放)", { error: metadataResult.reason?.message || String(metadataResult.reason || "") });
         }
         if (danmakuList.length > 0) {
             playResult.danmaku = danmakuList;
-        }
-        if (meta?.fid && context?.sourceId && typeof OmniBox.addPlayHistory === "function") {
-            const historyPayload = {
-                vodId: String(meta.sid || ""),
-                title: scrapeTitle || meta.v || meta.name || "LIBVIO视频",
-                pic: scrapePic || "",
-                episode: buildHistoryEpisode(playId, episodeNumber, episodeName),
-                sourceId: context.sourceId,
-                episodeNumber,
-                episodeName: episodeName || "",
-            };
-            OmniBox.addPlayHistory(historyPayload)
-                .then((added) => {
-                    OmniBox.log("info", `[LIBVIO] play 已${added ? "添加" : "跳过"}播放记录: ${historyPayload.title}`);
-                })
-                .catch((error) => {
-                    OmniBox.log("info", `[LIBVIO] play 添加播放记录失败: ${error.message}`);
-                });
-        } else {
-            logInfo("play 跳过播放记录", { sourceId: context?.sourceId || "", fid: meta?.fid || "", hasApi: typeof OmniBox.addPlayHistory === "function" });
         }
         return playResult;
     } catch (error) {

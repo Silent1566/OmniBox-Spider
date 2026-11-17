@@ -54,7 +54,7 @@ function loadSpider(source, filename) {
 }
 
 test("蜗牛4K supports the panlian_dark page structure", () => {
-  assert.equal(getVersion(standalone), "1.0.2");
+  assert.equal(getVersion(standalone), "1.0.4");
   assert.match(standalone, /\$\("a\.video-card"\)/);
   assert.match(standalone, /\.mobile-detail-title/);
   assert.match(standalone, /\.premium-meta-grid \.meta-item/);
@@ -72,7 +72,7 @@ test("蜗牛4K keeps a login session and rate-limits drive API requests", () => 
 test("玩偶聚合 parses the new 蜗牛4K cards and detail fields", () => {
   const woniuConfig = getSiteConfig(aggregate, "woniu4k");
   const wanouConfig = getSiteConfig(aggregate, "wanou");
-  assert.equal(getVersion(aggregate), "1.2.5");
+  assert.equal(getVersion(aggregate), "1.2.6");
   assert.match(woniuConfig, /listSelector: "[^"]*a\.video-card/);
   assert.match(woniuConfig, /searchListSelector: "[^"]*a\.video-card/);
   assert.doesNotMatch(wanouConfig, /a\.video-card/);

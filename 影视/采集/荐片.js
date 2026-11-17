@@ -1,7 +1,7 @@
 // @name 荐片APP
 // @author 
-// @description 刮削：支持，弹幕：支持，播放记录：支持，嗅探：支持
-// @version 1.1.1
+// @description 刮削：支持，弹幕：支持，嗅探：支持
+// @version 1.1.2
 // @downloadURL https://gh-proxy.org/https://github.com/Silent1566/OmniBox-Spider/raw/refs/heads/main/影视/采集/荐片.js
 /**
  * ============================================================================
@@ -210,16 +210,6 @@ function buildScrapedEpisodeName(scrapeData, mapping, originalName) {
     }
   }
   return originalName;
-}
-
-function buildHistoryEpisode(playId, episodeNumber, episodeName) {
-  if (episodeNumber !== undefined && episodeNumber !== null && episodeNumber !== "") {
-    return `${playId || ""}@@${episodeNumber}`;
-  }
-  if (episodeName) {
-    return `${playId || ""}@@${episodeName}`;
-  }
-  return playId || "";
 }
 
 /**
@@ -948,8 +938,6 @@ const handlePlay = async (playId, vodId = "", context = {}) => {
       const result = {
         danmakuList: [],
         scrapeTitle: "",
-        scrapePic: "",
-        episodeNumber: playMeta?.n ?? null,
         episodeName: episodeName || ""
       };
 
@@ -966,9 +954,6 @@ const handlePlay = async (playId, vodId = "", context = {}) => {
         }
 
         result.scrapeTitle = metadata.scrapeData.title || "";
-        if (metadata.scrapeData.posterPath) {
-          result.scrapePic = `https://image.tmdb.org/t/p/w500${metadata.scrapeData.posterPath}`;
-        }
 
         const mappings = Array.isArray(metadata.videoMappings) ? metadata.videoMappings : [];
         logInfo(`播放增强链路读取元数据成功: videoId=${videoIdForScrape}, mappings=${mappings.length}, scrapeType=${metadata.scrapeType || "unknown"}`);
@@ -976,9 +961,6 @@ const handlePlay = async (playId, vodId = "", context = {}) => {
         if (mapping) {
           if (mapping.episodeName) {
             result.episodeName = buildScrapedEpisodeName(metadata.scrapeData, mapping, result.episodeName || episodeName || "");
-          }
-          if (mapping.episodeNumber !== undefined && mapping.episodeNumber !== null) {
-            result.episodeNumber = mapping.episodeNumber;
           }
         } else if (mappings.length > 0) {
           logInfo(`播放增强链路未命中 mapping: fid=${playMeta?.fid || ""}`);
@@ -1011,45 +993,10 @@ const handlePlay = async (playId, vodId = "", context = {}) => {
     const playResult = playInfoResult.value || { urls: [], parse: 0, header: {} };
 
     let danmakuList = [];
-    let scrapeTitle = "";
-    let scrapePic = "";
-    let episodeNumber = playMeta?.n ?? null;
     if (metadataResult.status === "fulfilled" && metadataResult.value) {
       danmakuList = metadataResult.value.danmakuList || [];
-      scrapeTitle = metadataResult.value.scrapeTitle || "";
-      scrapePic = metadataResult.value.scrapePic || "";
-      if (metadataResult.value.episodeNumber !== undefined && metadataResult.value.episodeNumber !== null) {
-        episodeNumber = metadataResult.value.episodeNumber;
-      }
-      episodeName = metadataResult.value.episodeName || episodeName;
-      vodName = scrapeTitle || vodName;
     } else if (metadataResult.status === "rejected") {
       logInfo(`播放增强链路失败(不影响播放): ${metadataResult.reason?.message || metadataResult.reason}`);
-    }
-
-    if (videoIdForScrape && context?.sourceId && typeof OmniBox.addPlayHistory === "function") {
-      const historyPayload = {
-        vodId: videoIdForScrape,
-        title: scrapeTitle || vodName || playMeta.v || "荐片视频",
-        pic: scrapePic || "",
-        episode: buildHistoryEpisode(rawPlayId, episodeNumber, episodeName),
-        sourceId: context.sourceId,
-        episodeNumber: episodeNumber,
-        episodeName: episodeName || ""
-      };
-      OmniBox.addPlayHistory(historyPayload)
-        .then((added) => {
-          if (added) {
-            logInfo(`已添加播放记录: ${historyPayload.title}`);
-          } else {
-            logInfo(`播放记录已存在，跳过添加: ${historyPayload.title}`);
-          }
-        })
-        .catch((error) => {
-          logInfo(`添加播放记录失败: ${error.message}`);
-        });
-    } else {
-      logInfo(`跳过播放记录: sourceId=${context?.sourceId || ""}, hasApi=${typeof OmniBox.addPlayHistory === "function"}`);
     }
 
     if (danmakuList.length > 0) {

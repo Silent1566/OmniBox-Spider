@@ -1,8 +1,8 @@
 // @name 聚盘搜索 (pan.dyuzi.com)
 // @author 梦
-// @description 站点搜索 + 网盘资源解析（夸克/百度/迅雷等），支持网盘目录展开、刮削、弹幕、观看记录
+// @description 站点搜索 + 网盘资源解析（夸克/百度/迅雷等），支持网盘目录展开、刮削、弹幕
 // @dependencies: axios
-// @version 1.2.5
+// @version 1.2.6
 // @downloadURL https://gh-proxy.org/https://github.com/Silent1566/OmniBox-Spider/raw/refs/heads/main/影视/网盘/聚盘搜索.js
 
 
@@ -995,7 +995,7 @@ async function detail(params, context) {
 
           const ep = {
             name: epName,
-            playId: b64Encode({ mode: "drive_file", shareURL, fid, flag: sourceName, epName, title: primaryTitle, driveType, sourceVodId: vodId, resourceId, mappedFileId }),
+            playId: b64Encode({ mode: "drive_file", shareURL, fid, flag: sourceName, epName, title: primaryTitle, driveType, resourceId, mappedFileId }),
             size: Number(file.size || file.file_size || 0) || undefined
           };
 
@@ -1143,26 +1143,6 @@ async function play(params, context) {
     } catch (e) {
       await OmniBox.log("warn", `[dyuzi] 弹幕匹配失败: ${e.message}`);
     }
-
-    // 观看记录（可选）
-    Promise.resolve(OmniBox.addPlayHistory({
-      vodId: text(meta.sourceVodId || resourceId || title),
-      title: title,
-      episode: playId,
-      episodeName: epName || undefined,
-      playUrl: urls[0].url,
-      playHeader: info?.header || { "User-Agent": UA, "Referer": `${BASE}/` }
-    }))
-      .then(async (added) => {
-        if (added) {
-          await OmniBox.log("info", `[dyuzi] 已添加观看记录: ${title}`);
-        } else {
-          await OmniBox.log("info", `[dyuzi] 观看记录未写入(返回 falsy): ${title}`);
-        }
-      })
-      .catch(async (e) => {
-        await OmniBox.log("warn", `[dyuzi] 添加观看记录失败: ${e.message}`);
-      });
 
     return {
       urls,

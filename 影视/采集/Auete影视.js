@@ -1,7 +1,7 @@
 // @name Auete影视
 // @author 梦
 // @description 刮削：不支持，弹幕：不支持，嗅探：不支持，支持站内直链播放
-// @version 1.0.2
+// @version 1.0.3
 // @downloadURL https://gh-proxy.org/https://github.com/Silent1566/OmniBox-Spider/raw/refs/heads/main/影视/采集/Auete影视.js
 
 const OmniBox = require("omnibox_sdk");
@@ -389,37 +389,6 @@ async function play(params, context) {
     if (!directUrl) {
       throw new Error(`未找到直链，pn=${pn}`);
     }
-
-    Promise.resolve().then(async () => {
-      let totalDuration;
-      try {
-        const mediaInfo = await OmniBox.getVideoMediaInfo(directUrl, PLAY_HEADERS);
-        const duration = Number(mediaInfo?.format?.duration || 0);
-        if (Number.isFinite(duration) && duration > 0) {
-          totalDuration = Math.round(duration);
-        }
-      } catch (error) {
-        logInfo("获取媒体时长失败，跳过 totalDuration", { message: error?.message || String(error) });
-      }
-
-      try {
-        const historyPayload = {
-          vodId: meta.referer || meta.vodName || playPath,
-          title: meta.vodName || "Auete影视",
-          episode: playPath,
-          episodeName: meta.episodeName || undefined,
-          playUrl: directUrl,
-          playHeader: PLAY_HEADERS,
-          totalDuration,
-        };
-        await OmniBox.addPlayHistory(historyPayload);
-        logInfo("观看记录写入完成", { vodId: historyPayload.vodId, episodeName: historyPayload.episodeName || "", totalDuration: totalDuration || 0 });
-      } catch (error) {
-        logInfo("写入观看记录失败", { message: error?.message || String(error) });
-      }
-    }).catch((error) => {
-      logInfo("异步播放记录任务异常", { message: error?.message || String(error) });
-    });
 
     const response = {
       parse: 0,

@@ -2,7 +2,7 @@
 // @author 
 // @description 刮削：支持，弹幕：支持，嗅探：支持，只支持tvbox接口
 // @dependencies: crypto, axios
-// @version 1.5.1
+// @version 1.5.2
 // @downloadURL https://gh-proxy.org/https://github.com/Silent1566/OmniBox-Spider/raw/refs/heads/main/影视/网盘/盘搜分组.js
 
 /**
@@ -410,17 +410,6 @@ function findScrapeMapping(metadata = {}, candidates = [], episodeNumber = null,
     return null;
 }
 
-function addPlayHistoryAsync(payload = {}) {
-    if (typeof OmniBox?.addPlayHistory !== "function") return;
-    const sourceId = String(payload.sourceId || "").trim();
-    const vodId = String(payload.vodId || "").trim();
-    const title = String(payload.title || "").trim();
-    if (!sourceId || !vodId || !title) { logWarn("跳过播放记录", { reason: "missing_required_fields", hasSourceId: !!sourceId, vodId, title }); return; }
-    try {
-        OmniBox.addPlayHistory({ vodId, title, pic: String(payload.pic || "").trim(), episode: String(payload.episode || "").trim(), sourceId, episodeNumber: payload.episodeNumber || null, episodeName: String(payload.episodeName || "").trim() }).then((added) => logInfo(added ? "已添加播放记录" : "播放记录已存在，跳过添加", { vodId, title, episodeName: payload.episodeName || "", episodeNumber: payload.episodeNumber || null })).catch((error) => logWarn("添加播放记录失败", { vodId, title, error: error.message || String(error) }));
-    } catch (error) { logWarn("添加播放记录异常", { vodId, title, error: error.message || String(error) }); }
-}
-
 async function getMergedMetadataCached(videoId = "", title = "", scrapeCandidates = []) {
     const metadataCacheKey = buildCacheKey("pansou-group:metadata", videoId);
     const cached = await getCachedJSON(metadataCacheKey);
@@ -747,7 +736,7 @@ async function resolve115MagnetPlay(playId, flag, callerSource, context, params 
     const realFile = await find115FileByName(targetFile.name);
     if (!realFile) throw new Error("115网盘内未搜索到真实文件");
     const metadataPromise = (async () => {
-        const metaResult = { danmakuList: [], scrapeTitle: "", scrapePic: "", episodeNumber: data.n || null, episodeName: String(data.e || params.episodeName || "").trim(), mappingMatched: false, mappingFileId: "", danmuFileName: "" };
+        const metaResult = { danmakuList: [], episodeNumber: data.n || null, episodeName: String(data.e || params.episodeName || "").trim(), mappingMatched: false, mappingFileId: "", danmuFileName: "" };
         const videoIdForScrape = String(params.vodId || data.sid || "").trim();
         if (!videoIdForScrape) { logWarn("115秒传弹幕跳过: 缺少视频ID", { fileId: targetFileId, fileName: targetFile.name || data.fileName || "" }); return metaResult; }
         try {
@@ -759,8 +748,7 @@ async function resolve115MagnetPlay(playId, flag, callerSource, context, params 
             const mapping = findScrapeMapping(metadata, [data.fid, syntheticFid, targetFile._fid].filter(Boolean), Number.isFinite(epNo) && epNo > 0 ? epNo : null, targetFile.name || data.fileName || "");
             if (!mapping) { logWarn("115秒传弹幕未命中刮削映射", { videoId: videoIdForScrape, fid: data.fid || syntheticFid, fileId: targetFileId, fileName: targetFile.name || data.fileName || "", mappingPreview: metadata.videoMappings.slice(0, 3).map((item) => String(item?.fileId || "").slice(0, 120)) }); return metaResult; }
             const scrapeData = metadata.scrapeData;
-            metaResult.mappingMatched = true; metaResult.mappingFileId = String(mapping.fileId || ""); metaResult.scrapeTitle = scrapeData.title || "";
-            if (scrapeData.posterPath) metaResult.scrapePic = `https://image.tmdb.org/t/p/w500${scrapeData.posterPath}`;
+            metaResult.mappingMatched = true; metaResult.mappingFileId = String(mapping.fileId || "");
             if (mapping.episodeNumber) metaResult.episodeNumber = mapping.episodeNumber;
             const scrapedEpisodeDisplayName = buildScrapedEpisodeName(scrapeData, mapping, targetFile.name || data.fileName || "", data.e || "");
             if (scrapedEpisodeDisplayName) metaResult.episodeName = scrapedEpisodeDisplayName;
@@ -776,7 +764,6 @@ async function resolve115MagnetPlay(playId, flag, callerSource, context, params 
     const metadataValue = metadataResult.status === "fulfilled" ? metadataResult.value : null;
     const finalDanmaku = Array.isArray(metadataValue?.danmakuList) ? metadataValue.danmakuList : [];
     const playResult = { urls: [{ name: "115播放", url: playUrl }], flag: "115网盘", header: { "User-Agent": getDefaultHeaders()["User-Agent"], "Referer": "https://115.com/", "Cookie": GLOBAL_115_COOKIE }, parse: 0, danmaku: finalDanmaku };
-    addPlayHistoryAsync({ sourceId: context?.sourceId || "盘搜分组-115秒传", vodId: String(params.vodId || data.sid || magnet || targetFileId || realFile.fid || playUrl).trim(), title: String(metadataValue?.scrapeTitle || params.vodName || data.v || data.title || data.fileName || targetFile.name || "115秒传资源").trim(), pic: metadataValue?.scrapePic || "", episode: String(metadataValue?.episodeName || data.e || realFile.name || targetFile.name || "").trim(), episodeName: String(metadataValue?.episodeName || data.e || realFile.name || targetFile.name || "").trim(), episodeNumber: metadataValue?.episodeNumber || data.n || null });
     logInfo("115磁力文件播放地址返回", { fid: realFile.fid || "", pickcode: realFile.pickcode || "", fileName: realFile.name || targetFile.name, outputUrlCount: playResult.urls.length, danmakuCount: finalDanmaku.length, episodeNumber: metadataValue?.episodeNumber || data.n || null, episodeName: metadataValue?.episodeName || data.e || "" });
     return playResult;
 }
@@ -2168,7 +2155,6 @@ async function play(params, context) {
         if (isMagnetUrl(playId)) {
             const episodeName = normalizeMagnetTitle(params.episodeName || params.title || "磁力资源");
             OmniBox.log("info", `检测到磁力播放，直接返回磁力链接: title=${episodeName}`);
-            addPlayHistoryAsync({ sourceId: context?.sourceId || "盘搜分组-磁力", vodId: String(params.vodId || playId).trim(), title: String(params.vodName || params.title || episodeName || "磁力资源").trim(), pic: params.pic || "", episode: episodeName, episodeName, episodeNumber: extractEpisodeNumber(episodeName) });
             return {
                 urls: [{ name: episodeName || "磁力资源", url: playId }],
                 header: {},
@@ -2189,10 +2175,6 @@ async function play(params, context) {
         }
 
         let danmakuList = [];
-        let scrapeTitle = "";
-        let scrapePic = "";
-        let episodeNumber = null;
-        let episodeName = params.episodeName || "";
         try {
             const metadata = await OmniBox.getScrapeMetadata(shareURL);
             if (metadata && metadata.scrapeData && metadata.videoMappings) {
@@ -2208,18 +2190,6 @@ async function play(params, context) {
 
                 if (matchedMapping && metadata.scrapeData) {
                     const scrapeData = metadata.scrapeData;
-
-                    scrapeTitle = scrapeData.title || "";
-                    if (scrapeData.posterPath) {
-                        scrapePic = `https://image.tmdb.org/t/p/w500${scrapeData.posterPath}`;
-                    }
-
-                    if (matchedMapping.episodeNumber) {
-                        episodeNumber = matchedMapping.episodeNumber;
-                    }
-                    if (matchedMapping.episodeName && !episodeName) {
-                        episodeName = matchedMapping.episodeName;
-                    }
 
                     let fileName = "";
                     const scrapeType = metadata.scrapeType || "";
@@ -2251,36 +2221,6 @@ async function play(params, context) {
 
         if (!playInfo || !playInfo.url || !Array.isArray(playInfo.url) || playInfo.url.length === 0) {
             throw new Error("无法获取播放地址");
-        }
-
-        try {
-            const vodId = params.vodId || shareURL;
-            if (vodId) {
-                const title = params.title || scrapeTitle || shareURL;
-                const pic = params.pic || scrapePic || "";
-
-                Promise.resolve(OmniBox.addPlayHistory({
-                    vodId: vodId,
-                    title: title,
-                    pic: pic,
-                    episode: playId,
-                    sourceId: shareURL,
-                    episodeNumber: episodeNumber,
-                    episodeName: episodeName,
-                }))
-                    .then((added) => {
-                        if (added) {
-                            OmniBox.log("info", `已添加观看记录: ${title}`);
-                        } else {
-                            OmniBox.log("info", `观看记录未写入(返回 falsy): ${title}`);
-                        }
-                    })
-                    .catch((error) => {
-                        OmniBox.log("warn", `添加观看记录失败: ${error.message}`);
-                    });
-            }
-        } catch (error) {
-            OmniBox.log("warn", `添加观看记录失败: ${error.message}`);
         }
 
         const urlList = playInfo.url || [];

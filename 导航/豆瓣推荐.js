@@ -2,7 +2,7 @@
 // @indexs 1
 // @author lampon
 // @description 豆瓣推荐爬虫脚本
-// @version 1.0.8
+// @version 1.0.9
 // @downloadURL https://gh-proxy.org/https://github.com/Silent1566/OmniBox-Spider/raw/refs/heads/main/导航/豆瓣推荐.js
 
 const OmniBox = require("omnibox_sdk");
@@ -28,7 +28,6 @@ function buildDoubanSubjectLink(vodId) {
  * @returns {Object} 返回分类列表和推荐视频列表
  */
 async function home(params, context) {
-  const sites = await OmniBox.getAnalyzeSites();
   try {
     // 构建分类列表
     const classes = [

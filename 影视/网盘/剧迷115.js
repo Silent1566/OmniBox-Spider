@@ -1,7 +1,7 @@
 // @name 剧迷115
 // @author 梦
 // @description 影视站：gimy115.top，支持首页、分类、搜索、详情与网盘线路提取；支持刮削、弹幕、播放记录；Cookie 支持环境变量配置
-// @version 1.2.1
+// @version 1.2.2
 // @dependencies cheerio
 
 const OmniBox = require("omnibox_sdk");
@@ -940,9 +940,6 @@ async function play(params, context) {
       const metadataPromise = (async () => {
         const result = {
           danmakuList: [],
-          scrapeTitle: "",
-          scrapePic: "",
-          episodeNumber: null,
           episodeName,
         };
         const vodId = String(playMeta.sid || params.vodId || params.videoId || "").trim();
@@ -957,12 +954,7 @@ async function play(params, context) {
           const formattedId = `${shareURL}|${fileId}`;
           const matchedMapping = metadata.videoMappings.find((mapping) => mapping && mapping.fileId === formattedId);
           const scrapeData = metadata.scrapeData || {};
-          result.scrapeTitle = scrapeData.title || "";
-          if (scrapeData.posterPath) {
-            result.scrapePic = `https://image.tmdb.org/t/p/w500${scrapeData.posterPath}`;
-          }
           if (!matchedMapping) return result;
-          result.episodeNumber = matchedMapping.episodeNumber ?? null;
           if (matchedMapping.episodeName && !result.episodeName) {
             result.episodeName = matchedMapping.episodeName;
           }
@@ -997,38 +989,8 @@ async function play(params, context) {
       if (urls.length) {
         const header = playInfo?.header || playInfo?.headers || {};
         let danmakuList = playInfo?.danmaku;
-        let scrapeTitle = "";
-        let scrapePic = "";
-        let episodeNumber = null;
-        let finalEpisodeName = episodeName;
         if (metadataResult.status === "fulfilled" && metadataResult.value) {
           danmakuList = metadataResult.value.danmakuList?.length ? metadataResult.value.danmakuList : danmakuList;
-          scrapeTitle = metadataResult.value.scrapeTitle || "";
-          scrapePic = metadataResult.value.scrapePic || "";
-          episodeNumber = metadataResult.value.episodeNumber ?? null;
-          finalEpisodeName = metadataResult.value.episodeName || finalEpisodeName;
-        }
-
-        if (context?.sourceId) {
-          OmniBox.addPlayHistory({
-            vodId: String(playMeta.sid || params.vodId || params.videoId || shareURL),
-            title: params.title || scrapeTitle || playMeta.t || shareURL,
-            pic: params.pic || scrapePic || playMeta.p || "",
-            episode: playId,
-            sourceId: context.sourceId,
-            episodeNumber,
-            episodeName: finalEpisodeName,
-          })
-            .then((added) => {
-              if (added) {
-                OmniBox.log("info", `[Gimy115][play] 已添加观看记录: ${params.title || scrapeTitle || playMeta.t || shareURL}`);
-              } else {
-                OmniBox.log("info", `[Gimy115][play] 观看记录已存在,跳过添加: ${params.title || scrapeTitle || playMeta.t || shareURL}`);
-              }
-            })
-            .catch((error) => {
-              OmniBox.log("warn", `[Gimy115][play] 添加观看记录失败: ${error.message}`);
-            });
         }
 
         return {

@@ -1,7 +1,7 @@
 // @name 金牌
 // @author 梦
 // @description API 站：https://m.jiabaide.cn，支持首页、分类、搜索、详情与播放解析
-// @version 1.1.4
+// @version 1.1.5
 // @downloadURL https://gh-proxy.org/https://github.com/Silent1566/OmniBox-Spider/raw/refs/heads/main/影视/采集/金牌.js
 // @dependencies crypto-js
 
@@ -473,17 +473,11 @@ async function play(params, context) {
     const metadataPromise = (async () => {
       const result = {
         danmakuList: [],
-        scrapeTitle: "",
-        scrapePic: "",
-        mapping: null,
       };
       try {
         const metadata = await OmniBox.getScrapeMetadata(sid);
         const mappings = Array.isArray(metadata?.videoMappings) ? metadata.videoMappings : [];
         const mapping = findEpisodeMapping(mappings, [nid, `${sid}|${nid}`]);
-        result.mapping = mapping;
-        result.scrapeTitle = pickScrapeTitle(metadata, title);
-        result.scrapePic = pickScrapePic(metadata, "");
         await OmniBox.log("info", `[金牌][play] 元数据读取完成 sid=${sid} mappings=${mappings.length} matched=${!!mapping} expected=${nid} preview=${buildMappingPreview(mappings) || "<empty>"}`);
         if (!mapping && mappings.length > 0) {
           await OmniBox.log("info", `[金牌][play] 首条映射原始数据 sample=${JSON.stringify(mappings.slice(0, 2)).slice(0, 400)}`);
@@ -514,53 +508,13 @@ async function play(params, context) {
     }
 
     let danmakuList = [];
-    let scrapeTitle = title;
-    let scrapePic = "";
-    let mapping = null;
     if (metadataResult.status === "fulfilled" && metadataResult.value) {
       danmakuList = metadataResult.value.danmakuList || [];
-      scrapeTitle = text(metadataResult.value.scrapeTitle || title);
-      scrapePic = text(metadataResult.value.scrapePic || "");
-      mapping = metadataResult.value.mapping || null;
     } else if (metadataResult.status === "rejected") {
       await OmniBox.log("warn", `[金牌][play] metadataPromise rejected: ${metadataResult.reason?.message || metadataResult.reason}`);
     }
 
     const header = { "User-Agent": MOBILE_UA };
-    const historyEpisodeNumber = pickEpisodeNumber(mapping?.episodeNumber, episodeName);
-    const historyEpisodeName = formatEpisodeDisplayName(mapping?.episodeName || episodeName, historyEpisodeNumber);
-    const historyPayload = {
-      vodId: sid,
-      title: scrapeTitle || title || sid,
-      pic: scrapePic || undefined,
-      episode: rawPlayId,
-      sourceId: context?.sourceId,
-      episodeNumber: historyEpisodeNumber || undefined,
-      episodeName: text(historyEpisodeName || undefined),
-      playUrl: urls[0]?.url || "",
-      playHeader: header,
-    };
-
-    try {
-      if (historyPayload.sourceId && typeof OmniBox.addPlayHistory === "function") {
-        OmniBox.addPlayHistory(historyPayload)
-          .then((added) => {
-            if (added) {
-              OmniBox.log("info", `[金牌][play] 播放记录写入成功 sid=${sid} episode=${historyPayload.episodeName || ""}`);
-            } else {
-              OmniBox.log("info", `[金牌][play] 播放记录已存在 sid=${sid} episode=${historyPayload.episodeName || ""}`);
-            }
-          })
-          .catch((error) => {
-            OmniBox.log("warn", `[金牌][play] 播放记录写入失败: ${error.message}`);
-          });
-      } else {
-        await OmniBox.log("info", `[金牌][play] 跳过播放记录 sourceId=${historyPayload.sourceId || ""} hasApi=${typeof OmniBox.addPlayHistory === "function"}`);
-      }
-    } catch (error) {
-      await OmniBox.log("warn", `[金牌][play] 启动异步播放记录失败: ${error.message}`);
-    }
-
     await OmniBox.log("info", `[金牌][play] success sid=${sid} nid=${nid} urls=${urls.length} danmaku=${danmakuList.length}`);
     return {
       parse: 0,

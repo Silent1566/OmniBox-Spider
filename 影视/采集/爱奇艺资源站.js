@@ -1,8 +1,8 @@
 // @name 爱奇艺资源站(MacCMS API)-增强版
 // @author OpenClaw Bingbu + 梦
-// @description 刮削：支持，弹幕：支持，嗅探：支持，观看记录：支持，广告：菠菜
+// @description 刮削：支持，弹幕：支持，嗅探：支持，广告：菠菜
 // @dependencies: axios
-// @version 1.1.1
+// @version 1.1.2
 // @downloadURL https://gh-proxy.org/https://github.com/Silent1566/OmniBox-Spider/raw/refs/heads/main/影视/采集/爱奇艺资源站.js
 
 /**
@@ -14,7 +14,6 @@
  * 新增能力：
  * - 支持 TMDB 刮削（detail 阶段触发 processScraping）
  * - 支持弹幕匹配（play 阶段通过 getDanmakuByFileName 获取）
- * - 支持观看记录（play 阶段 addPlayHistory）
  * - 保留原有：一级主类聚合、二级筛选、分类屏蔽、嗅探兼容
  *
  * 分类屏蔽配置：
@@ -725,24 +724,6 @@ async function play(params, context) {
     };
 
     await OmniBox.log("info", `[play] 播放地址已确定 parse=${parse}, url=${url.slice(0, 200)}`);
-
-    try {
-      const historyPayload = {
-        vodId: vodId || resourceId || title,
-        title: title || vodId,
-        episode: playId,
-        episodeName: mapping?.episodeName || epName || undefined,
-        episodeNumber: mapping?.episodeNumber != null ? mapping.episodeNumber : undefined,
-        pic: scrapeData?.posterPath ? `https://image.tmdb.org/t/p/w500${scrapeData.posterPath}` : undefined,
-        playUrl: url,
-        playHeader: header
-      };
-      await OmniBox.log("info", `[play] 准备写入观看记录 vodId=${historyPayload.vodId}, episodeName=${historyPayload.episodeName || ""}, episodeNumber=${historyPayload.episodeNumber ?? ""}`);
-      await OmniBox.addPlayHistory(historyPayload);
-      await OmniBox.log("info", `[play] 观看记录写入完成 vodId=${historyPayload.vodId}`);
-    } catch (error) {
-      await OmniBox.log("warn", `[play] 添加观看记录失败: ${error.message}`);
-    }
 
     return {
       urls: [{ name: epName || meta.flag || "播放", url }],

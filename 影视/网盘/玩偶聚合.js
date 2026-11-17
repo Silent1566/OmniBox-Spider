@@ -2,7 +2,7 @@
 // @author @lucky_TJQ
 // @description 聚合玩偶、木偶、蜡笔、闪电、至臻、二小、虎斑、快映、欧哥、多多、蜗牛4K等网盘站点；支持刮削、弹幕、多线路、二级分类筛选、翻页、网盘排序
 // @dependencies axios,cheerio
-// @version 1.2.5
+// @version 1.2.6
 // @downloadURL https://gh-proxy.org/https://github.com/Silent1566/OmniBox-Spider/raw/refs/heads/main/影视/网盘/玩偶聚合.js
 
 const OmniBox = require("omnibox_sdk");
@@ -286,7 +286,6 @@ if (WONIU4K_COOKIE) {
 // ==================== 缓存 ====================
 const driveParseCache = new Map();
 const siteFilterCache = new Map();
-const playHistoryDedupeCache = new Map();
 const CACHE_TTL = { drive: 60 * 60 * 1000, filter: 6 * 60 * 1000 };
 
 function buildCacheKey(prefix, value) {
@@ -1748,10 +1747,6 @@ async function play(params, context) {
     const metadataPromise = (async () => {
       const result = {
         danmakuList: [],
-        scrapeTitle: "",
-        scrapePic: "",
-        episodeNumber: null,
-        episodeName: params.episodeName || "",
       };
 
       if (!scrapeKey) return result;
@@ -1771,17 +1766,6 @@ async function play(params, context) {
         }
 
         const scrapeData = metadata.scrapeData;
-        result.scrapeTitle = scrapeData.title || "";
-        if (scrapeData.posterPath) {
-          result.scrapePic = `https://image.tmdb.org/t/p/w500${scrapeData.posterPath}`;
-        }
-
-        if (matchedMapping.episodeNumber) {
-          result.episodeNumber = matchedMapping.episodeNumber;
-        }
-        if (matchedMapping.episodeName && !result.episodeName) {
-          result.episodeName = matchedMapping.episodeName;
-        }
 
         // 生成 fileName 用于弹幕匹配（参考木偶.js）
         let fileName = "";
@@ -1823,58 +1807,11 @@ async function play(params, context) {
     }
 
     let danmakuList = [];
-    let scrapeTitle = "";
-    let scrapePic = "";
-    let episodeNumber = null;
-    let episodeName = params.episodeName || "";
 
     if (metadataResult.status === "fulfilled" && metadataResult.value) {
       danmakuList = metadataResult.value.danmakuList || [];
-      scrapeTitle = metadataResult.value.scrapeTitle || "";
-      scrapePic = metadataResult.value.scrapePic || "";
-      episodeNumber = metadataResult.value.episodeNumber || null;
-      episodeName = metadataResult.value.episodeName || episodeName;
     } else if (metadataResult.status === "rejected") {
       await OmniBox.log("warn", `[play] 获取元数据失败(不影响播放): ${metadataResult.reason && metadataResult.reason.message ? metadataResult.reason.message : metadataResult.reason}`);
-    }
-
-    // ==================== 添加观看记录（参考木偶.js）====================
-    try {
-      const sourceId = context.sourceId;
-      if (sourceId) {
-        const dedupeKey = `${sourceId}|${playId}`;
-        const now = Date.now();
-        const lastAdded = playHistoryDedupeCache.get(dedupeKey);
-        if (lastAdded && now - lastAdded < 2000) {
-          await OmniBox.log("info", `[play] 跳过重复观看记录: ${dedupeKey}`);
-        } else {
-          playHistoryDedupeCache.set(dedupeKey, now);
-          const title = params.title || scrapeTitle || shareURL;
-          const pic = params.pic || scrapePic || "";
-
-          OmniBox.addPlayHistory({
-            vodId: scrapeKey,
-            title: title,
-            pic: pic,
-            episode: playId,
-            sourceId: sourceId,
-            episodeNumber: episodeNumber,
-            episodeName: episodeName,
-          })
-            .then((added) => {
-              if (added) {
-                OmniBox.log("info", `[play] 已添加观看记录: ${title}`);
-              } else {
-                OmniBox.log("info", `[play] 观看记录已存在,跳过添加: ${title}`);
-              }
-            })
-            .catch((error) => {
-              OmniBox.log("warn", `[play] 添加观看记录失败: ${error.message}`);
-            });
-        }
-      }
-    } catch (error) {
-      await OmniBox.log("warn", `[play] 添加观看记录失败: ${error.message}`);
     }
 
     const urls = playInfo.url.map((item) => ({ name: item.name || "播放", url: item.url }));

@@ -2,7 +2,7 @@
 # @name 拦截器模板
 # @author OmniBox
 # @description 通用拦截器模板，覆盖所有生命周期阶段（home/category/search/detail/play 的 before 与 after），含完整注释和日志示例
-# @version 1.0.0
+# @version 1.0.1
 # @filter-stages home_before,home_after,category_before,category_after,search_before,search_after,detail_before,detail_after,play_before,play_after
 # @filter-config-schema {"description":"通用拦截器模板，演示如何在各个生命周期阶段拦截并处理数据","fields":[{"key":"enabled","label":"启用拦截器","type":"boolean","required":false,"placeholder":"全局开关，默认启用"},{"key":"logLevel","label":"日志级别","type":"select","required":false,"placeholder":"日志输出级别","options":[{"label":"debug","value":"debug"},{"label":"info","value":"info"},{"label":"warn","value":"warn"},{"label":"error","value":"error"}]},{"key":"customParam","label":"自定义参数","type":"string","required":false,"placeholder":"可在拦截器中使用的自定义配置项"}]}
 
@@ -75,7 +75,6 @@ OmniBox 拦截器模板 (Python)
   OmniBox.getDriveInfoByShareURL(url)     - 获取网盘信息
   OmniBox.getDriveFileList(url, fid)      - 获取网盘文件列表
   OmniBox.getDriveVideoPlayInfo(...)      - 获取网盘视频播放信息
-  OmniBox.getAnalyzeSites()              - 获取已配置的站点列表
   OmniBox.getCache(key)                  - 获取缓存
   OmniBox.setCache(key, value, ttl)      - 设置缓存
 

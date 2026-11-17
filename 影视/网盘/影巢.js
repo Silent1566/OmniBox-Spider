@@ -2,7 +2,7 @@
 // @author lampon
 // @description
 // @dependencies axios
-// @version 1.1.16
+// @version 1.1.17
 // @downloadURL https://gh-proxy.org/https://github.com/Silent1566/OmniBox-Spider/raw/refs/heads/main/影视/网盘/影巢.js
 
 const OmniBox = require("omnibox_sdk");
@@ -2276,7 +2276,6 @@ async function detail(params, context) {
 
         const episode = {
           name: epName,
-          // 追加 vodId（detail 的 videoId）到 playId 第三段，供 play 接口写历史记录使用
           // 格式：shareURL|fileId|vodId(JSON字符串)
           playId: `${formattedFileId}|${videoId}`,
           size: size > 0 ? size : undefined,
@@ -2507,12 +2506,8 @@ async function play(params, context) {
       );
     }
 
-    // 参考 pansou.js：匹配元数据用于弹幕和历史写入
+    // 参考 pansou.js：匹配元数据用于弹幕
     let danmakuList = [];
-    let scrapeTitle = safeString(params?.title || "");
-    let scrapePic = safeString(params?.pic || "");
-    let episodeNumber = null;
-    let episodeName = safeString(params?.episodeName || "");
     try {
       const resourceId = safeString(rawVodIdFromPlayId || params?.vodId || "");
       const metadata = await OmniBox.getScrapeMetadata(resourceId);
@@ -2523,14 +2518,6 @@ async function play(params, context) {
           null;
         if (matchedMapping) {
           const sData = metadata.scrapeData || {};
-          scrapeTitle = scrapeTitle || safeString(sData.title);
-          if (!scrapePic && safeString(sData.posterPath)) {
-            scrapePic = `${TMDB_IMAGE_BASE_URL}/w500${safeString(sData.posterPath)}`;
-          }
-          if (matchedMapping.episodeNumber)
-            episodeNumber = matchedMapping.episodeNumber;
-          if (matchedMapping.episodeName && !episodeName)
-            episodeName = matchedMapping.episodeName;
 
           let fileName = "";
           const sType = metadata.scrapeType || "";
@@ -2591,41 +2578,6 @@ async function play(params, context) {
         url: safeString(item?.url),
       }))
       .filter((x) => x.url);
-
-    // 播放记录：不阻塞主流程，放到后台回调里执行并打印结果日志
-    try {
-      const vodId = safeString(rawVodIdFromPlayId || params?.vodId || shareURL);
-      const title = safeString(params?.title || scrapeTitle || shareURL);
-      const pic = safeString(params?.pic || scrapePic || "");
-      const firstUrl = urls[0]?.url || "";
-      Promise.resolve(OmniBox.addPlayHistory({
-        vodId,
-        title,
-        pic,
-        episode: playId,
-        episodeNumber: episodeNumber,
-        episodeName: episodeName,
-        playUrl: firstUrl,
-        playHeader: playInfo.header || {},
-      }))
-        .then((added) => {
-          OmniBox.log(
-            "info",
-            `tmdb.js play 写入播放记录完成: vodId=${vodId}, episodeName=${episodeName || ""}, added=${String(added)}`,
-          );
-        })
-        .catch((error) => {
-          OmniBox.log(
-            "warn",
-            `tmdb.js play 写入播放记录失败: ${error.message}`,
-          );
-        });
-    } catch (error) {
-      await OmniBox.log(
-        "warn",
-        `tmdb.js play 构造播放记录任务失败: ${error.message}`,
-      );
-    }
 
     const finalDanmaku =
       danmakuList && danmakuList.length > 0

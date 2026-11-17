@@ -2,7 +2,7 @@
 // @author
 // @description 刮削：支持，弹幕：支持，播放记录：支持
 // @dependencies: axios, cheerio
-// @version 1.0.7
+// @version 1.0.8
 // @downloadURL https://gh-proxy.org/https://github.com/Silent1566/OmniBox-Spider/raw/refs/heads/main/影视/网盘/闪电.js
 
 // 引入 OmniBox SDK
@@ -1415,10 +1415,6 @@ async function play(params, context) {
     const metadataPromise = (async () => {
       const result = {
         danmakuList: [],
-        scrapeTitle: "",
-        scrapePic: "",
-        episodeNumber: null,
-        episodeName: params.episodeName || playMeta.e || "",
       };
 
       if (!videoId) return result;
@@ -1436,17 +1432,6 @@ async function play(params, context) {
         }
 
         const scrapeData = metadata.scrapeData;
-        result.scrapeTitle = scrapeData.title || "";
-        if (scrapeData.posterPath) {
-          result.scrapePic = `https://image.tmdb.org/t/p/w500${scrapeData.posterPath}`;
-        }
-
-        if (matchedMapping.episodeNumber) {
-          result.episodeNumber = matchedMapping.episodeNumber;
-        }
-        if (matchedMapping.episodeName && !result.episodeName) {
-          result.episodeName = matchedMapping.episodeName;
-        }
 
         let fileName = "";
         const scrapeType = metadata.scrapeType || "";
@@ -1487,49 +1472,11 @@ async function play(params, context) {
     }
 
     let danmakuList = [];
-    let scrapeTitle = "";
-    let scrapePic = "";
-    let episodeNumber = null;
-    let episodeName = params.episodeName || "";
 
     if (metadataResult.status === "fulfilled" && metadataResult.value) {
       danmakuList = metadataResult.value.danmakuList || [];
-      scrapeTitle = metadataResult.value.scrapeTitle || "";
-      scrapePic = metadataResult.value.scrapePic || "";
-      episodeNumber = metadataResult.value.episodeNumber || null;
-      episodeName = metadataResult.value.episodeName || episodeName;
     } else if (metadataResult.status === "rejected") {
       OmniBox.log("warn", `获取元数据失败(不影响播放): ${metadataResult.reason && metadataResult.reason.message ? metadataResult.reason.message : metadataResult.reason}`);
-    }
-
-    try {
-      const sourceId = context.sourceId;
-      if (sourceId) {
-        const title = params.title || scrapeTitle || shareURL;
-        const pic = params.pic || scrapePic || "";
-
-        OmniBox.addPlayHistory({
-          vodId: videoId,
-          title: title,
-          pic: pic,
-          episode: playId,
-          sourceId: sourceId,
-          episodeNumber: episodeNumber,
-          episodeName: episodeName,
-        })
-          .then((added) => {
-            if (added) {
-              OmniBox.log("info", `已添加观看记录: ${title}`);
-            } else {
-              OmniBox.log("info", `观看记录已存在,跳过添加: ${title}`);
-            }
-          })
-          .catch((error) => {
-            OmniBox.log("warn", `添加观看记录失败: ${error.message}`);
-          });
-      }
-    } catch (error) {
-      OmniBox.log("warn", `添加观看记录失败: ${error.message}`);
     }
 
     const urlList = playInfo.url || [];

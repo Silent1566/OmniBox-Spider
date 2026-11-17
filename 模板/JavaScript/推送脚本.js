@@ -2,7 +2,7 @@
 // @push 1
 // @author lampon
 // @description 推送脚本
-// @version 1.0.6
+// @version 1.0.7
 // @downloadURL https://gh-proxy.org/https://github.com/Silent1566/OmniBox-Spider/raw/refs/heads/main/模板/JavaScript/推送脚本.js
 
 const OmniBox = require("omnibox_sdk");
@@ -420,10 +420,6 @@ async function detail(params) {
  * @param {Object} params - 参数对象
  *   - flag: 播放方式（服务端代理、本地代理、直连）
  *   - playId: 播放地址ID（格式：分享链接|文件ID）
- *   - vodId: 视频ID（可选，用于添加观看记录）
- *   - title: 视频标题（可选，用于添加观看记录）
- *   - pic: 视频封面图（可选，用于添加观看记录）
- *   - episodeName: 剧集名称（可选，用于添加观看记录）
  * @returns {Object} 播放地址
  */
 async function play(params) {
@@ -450,12 +446,8 @@ async function play(params) {
       throw new Error("分享链接或文件ID不能为空");
     }
 
-    // 获取刮削元数据，用于弹幕匹配和观看记录（使用通用API）
+    // 获取刮削元数据，用于弹幕匹配（使用通用API）
     let danmakuList = [];
-    let scrapeTitle = "";
-    let scrapePic = "";
-    let episodeNumber = null;
-    let episodeName = params.episodeName || "";
     try {
       // 直接使用 shareURL 作为 resourceId 获取刮削元数据
       const metadata = await OmniBox.getScrapeMetadata(shareURL);
@@ -477,20 +469,6 @@ async function play(params) {
         if (matchedMapping && metadata.scrapeData) {
           const scrapeData = metadata.scrapeData;
           OmniBox.log("info", `找到文件映射，fileId: ${fileId}, tmdbEpisodeId: ${matchedMapping.tmdbEpisodeId || "N/A"}`);
-
-          // 获取刮削的标题和封面图（用于观看记录）
-          scrapeTitle = scrapeData.title || "";
-          if (scrapeData.posterPath) {
-            scrapePic = `https://image.tmdb.org/t/p/w500${scrapeData.posterPath}`;
-          }
-
-          // 获取集数信息
-          if (matchedMapping.episodeNumber) {
-            episodeNumber = matchedMapping.episodeNumber;
-          }
-          if (matchedMapping.episodeName && !episodeName) {
-            episodeName = matchedMapping.episodeName;
-          }
 
           // 生成fileName用于弹幕匹配
           let fileName = "";
@@ -534,37 +512,6 @@ async function play(params) {
 
     if (!playInfo || !playInfo.url || !Array.isArray(playInfo.url) || playInfo.url.length === 0) {
       throw new Error("无法获取播放地址");
-    }
-
-    // 添加观看记录（如果不存在）
-    try {
-      const vodId = params.vodId || shareURL;
-      if (vodId) {
-        // 构建vodId：使用shareURL作为视频唯一标识
-        // 优先使用params中的标题，其次使用刮削的标题，最后使用shareURL
-        const title = params.title || scrapeTitle || shareURL;
-        // 优先使用params中的封面图，其次使用刮削的封面图
-        const pic = params.pic || scrapePic || "";
-
-        const added = await OmniBox.addPlayHistory({
-          vodId: vodId,
-          title: title,
-          pic: pic,
-          episode: playId, // 使用playId作为剧集标识
-          sourceId: shareURL,
-          episodeNumber: episodeNumber,
-          episodeName: episodeName,
-        });
-
-        if (added) {
-          OmniBox.log("info", `已添加观看记录: ${title}`);
-        } else {
-          OmniBox.log("info", `观看记录已存在，跳过添加: ${title}`);
-        }
-      }
-    } catch (error) {
-      OmniBox.log("warn", `添加观看记录失败: ${error.message}`);
-      // 添加观看记录失败不影响播放，继续执行
     }
 
     // 使用后端返回的url数组（格式：[{name: "RAW", url: "..."}, ...]）
